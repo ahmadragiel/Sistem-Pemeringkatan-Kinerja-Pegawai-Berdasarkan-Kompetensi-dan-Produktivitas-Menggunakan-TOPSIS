@@ -1,0 +1,44 @@
+/* Touch targets for compact screens */
+
+@media (max-width: 980px) {
+  .menu-button,
+  .btn,
+  .pagination__link,
+  .btn--link,
+  .flash__close {
+    min-width: 44px;
+  }
+
+  .skip-link:focus,
+  .subnav__link,
+  .input-card__link,
+  .process-step__link,
+  .stage-nav a,
+  .rubric summary,
+  .checkbox-row label,
+  .flash__close,
+  .btn--link,
+  .breadcrumb a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .btn--link,
+  .flash__close {
+    justify-content: center;
+    padding-inline: 6px;
+  }
+
+  .checkbox-row {
+    align-items: center;
+  }
+
+  .checkbox-row label {
+    flex: 1;
+  }
+
+  .filters__actions .btn {
+    min-width: 44px;
+  }
+}

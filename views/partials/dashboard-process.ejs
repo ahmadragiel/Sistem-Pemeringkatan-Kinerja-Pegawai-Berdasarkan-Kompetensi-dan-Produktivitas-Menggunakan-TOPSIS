@@ -1,0 +1,121 @@
+<section class="process" aria-labelledby="process-title">
+  <div class="process__head">
+    <div>
+      <p class="process__kicker">Alur keputusan</p>
+      <h2 class="process__title" id="process-title">Input, proses TOPSIS, dan output</h2>
+      <p class="process__description">Tiga bagian ini menunjukkan data yang masuk, tujuh tahap perhitungan yang dijalankan server, dan hasil yang sudah tersimpan. Status di bawah mengikuti data pada periode aktif.</p>
+    </div>
+    <% if (processView.phaseStatus === 'done') { %>
+      <span class="badge badge--success"><span class="badge__dot" aria-hidden="true"></span>Output tersedia</span>
+    <% } else if (processView.phaseStatus === 'stale') { %>
+      <span class="badge badge--warning"><span class="badge__dot" aria-hidden="true"></span>Perlu hitung ulang</span>
+    <% } else if (processView.phaseStatus === 'ready') { %>
+      <span class="badge badge--neutral"><span class="badge__dot" aria-hidden="true"></span>Input siap</span>
+    <% } else { %>
+      <span class="badge badge--neutral"><span class="badge__dot" aria-hidden="true"></span>Input belum lengkap</span>
+    <% } %>
+  </div>
+
+  <div class="process__phase">
+    <div class="process__phase-head">
+      <span class="process__phase-index" aria-hidden="true">1</span>
+      <div>
+        <h3 class="process__phase-title">Input</h3>
+        <p class="process__phase-note">Empat bahan yang harus tersedia sebelum TOPSIS dapat dijalankan.</p>
+      </div>
+    </div>
+    <ol class="input-grid">
+      <% processView.inputs.forEach(function (input) { %>
+        <li class="input-card input-card--<%= input.ready ? 'ok' : 'pending' %>">
+          <div class="input-card__top">
+            <h4 class="input-card__title"><%= input.title %></h4>
+            <span class="status-chip status-chip--<%= input.ready ? 'ok' : 'pending' %>"><%= input.ready ? 'Siap' : 'Belum' %></span>
+          </div>
+          <p class="input-card__value"><%= input.value %></p>
+          <p class="input-card__note"><%= input.note %></p>
+          <a class="input-card__link" href="<%= input.href %>">Buka data</a>
+        </li>
+      <% }); %>
+    </ol>
+  </div>
+
+  <div class="process__phase">
+    <div class="process__phase-head">
+      <span class="process__phase-index" aria-hidden="true">2</span>
+      <div>
+        <h3 class="process__phase-title">Proses TOPSIS</h3>
+        <p class="process__phase-note">Tujuh tahap dihitung di backend dari snapshot data. Setiap tautan menuju tabel dan rumus pada rincian perhitungan.</p>
+      </div>
+    </div>
+    <ol class="process-track">
+      <% processView.steps.forEach(function (step) { %>
+        <li class="process-step process-step--<%= step.status %>">
+          <span class="process-step__index" aria-hidden="true"><%= step.code %></span>
+          <div class="process-step__body">
+            <div class="process-step__top">
+              <h4 class="process-step__title"><%= step.title %></h4>
+              <% if (step.status === 'done') { %>
+                <span class="status-chip status-chip--ok">Selesai</span>
+              <% } else if (step.status === 'stale') { %>
+                <span class="status-chip status-chip--warning">Snapshot lama</span>
+              <% } else if (step.status === 'ready') { %>
+                <span class="status-chip status-chip--ready">Siap dihitung</span>
+              <% } else { %>
+                <span class="status-chip status-chip--pending">Menunggu data</span>
+              <% } %>
+            </div>
+            <p class="process-step__formula mono"><%= step.formula %></p>
+            <p class="process-step__explanation"><%= step.explanation %></p>
+            <p class="process-step__detail"><%= step.detail %></p>
+          </div>
+          <a class="process-step__link" href="<%= step.href %>"><%= step.status === 'done' || step.status === 'stale' ? 'Lihat tahap' : 'Buka proses' %></a>
+        </li>
+      <% }); %>
+    </ol>
+  </div>
+
+  <div class="process__phase">
+    <div class="process__phase-head">
+      <span class="process__phase-index" aria-hidden="true">3</span>
+      <div>
+        <h3 class="process__phase-title">Output</h3>
+        <p class="process__phase-note">Hasil hanya ditampilkan setelah perhitungan tersimpan di database.</p>
+      </div>
+    </div>
+    <% if (processView.output.available) { %>
+      <% const outputRun = processView.output.run; %>
+      <% const outputTop = processView.output.top; %>
+      <div class="output-card">
+        <div class="output-card__main">
+          <p class="output-card__label">Peringkat 1 / <%= outputRun.period_name %></p>
+          <% if (outputTop) { %>
+            <p class="output-card__name"><%= outputTop.employee_name %></p>
+            <p class="output-card__meta"><span class="mono"><%= outputTop.employee_code %></span> / <%= outputTop.employee_department %></p>
+            <p class="output-card__value"><%= fmt.decimal(outputTop.preference, 4) %></p>
+            <p class="output-card__caption">Nilai preferensi dari run #<%= outputRun.id %>, dihitung <%= fmt.dateTime(outputRun.calculated_at) %>.</p>
+          <% } else { %>
+            <p class="output-card__name">Tidak ada baris hasil</p>
+            <p class="output-card__caption">Perhitungan tersimpan, tetapi tidak memuat baris alternatif.</p>
+          <% } %>
+          <% if (processView.output.stale) { %>
+            <p class="output-card__warning">Snapshot ini sudah tidak sesuai data terbaru. Hitung ulang sebelum memakai hasil untuk keputusan.</p>
+          <% } %>
+        </div>
+        <div class="output-card__actions">
+          <a class="btn btn--primary btn--sm" href="/peringkat?period=<%= outputRun.period_id %>&run=<%= outputRun.id %>">Hasil pemeringkatan</a>
+          <a class="btn btn--secondary btn--sm" href="/perhitungan/<%= outputRun.id %>">Rincian perhitungan</a>
+          <a class="btn btn--secondary btn--sm" href="/laporan?period=<%= outputRun.period_id %>">Laporan</a>
+          <a class="btn--link" href="/peringkat/export.csv?run=<%= outputRun.id %>">Unduh CSV</a>
+        </div>
+      </div>
+    <% } else { %>
+      <div class="output-empty">
+        <div>
+          <p class="output-empty__title">Output belum tersedia</p>
+          <p><%= activePeriod ? 'Belum ada perhitungan tersimpan untuk ' + activePeriod.name + '. Jalankan TOPSIS setelah input siap agar peringkat, laporan, dan ekspor dapat digunakan.' : 'Tetapkan periode penilaian dan lengkapi input terlebih dahulu. Peringkat tidak dibuat sebelum perhitungan tersimpan.' %></p>
+        </div>
+        <a class="btn btn--secondary btn--sm" href="<%= activePeriod ? '/perhitungan?period=' + activePeriod.id : '/periode' %>"><%= activePeriod ? 'Buka perhitungan TOPSIS' : 'Kelola periode' %></a>
+      </div>
+    <% } %>
+  </div>
+</section>

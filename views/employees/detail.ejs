@@ -1,0 +1,244 @@
+<%- include('../partials/layout-top') %>
+
+<header class="page-header">
+  <div class="page-header__main">
+    <p class="page-header__kicker">Data master / Pegawai</p>
+    <h1><%= employee.code %> / <%= employee.name %></h1>
+    <p class="page-header__description">
+      <%= employee.position %> pada <%= employee.department %>.
+      <% if (employee.archived_at) { %>Pegawai ini berada di arsip dan tidak dihitung sebagai alternatif. <% } %>
+    </p>
+  </div>
+  <div class="page-header__actions">
+    <a class="btn btn--secondary" href="/pegawai">Kembali</a>
+    <a class="btn btn--secondary" href="/pegawai/<%= employee.id %>/ubah">Ubah data</a>
+    <% if (employee.archived_at) { %>
+      <form class="inline-form" method="post" action="/pegawai/<%= employee.id %>/pulihkan">
+        <button type="submit" class="btn btn--primary" data-busy-label="Memulihkan...">Pulihkan</button>
+      </form>
+    <% } else { %>
+      <button
+        type="button"
+        class="btn btn--secondary"
+        data-confirm-action="/pegawai/<%= employee.id %>/arsip"
+        data-confirm-title="Arsipkan pegawai?"
+        data-confirm-message="<%= employee.name %> akan dikeluarkan dari alternatif aktif. Riwayat penilaian dan perhitungan tetap tersimpan."
+        data-confirm-label="Arsipkan">Arsipkan</button>
+    <% } %>
+    <% if (assessmentCount === 0 && runCount === 0) { %>
+      <button
+        type="button"
+        class="btn btn--danger"
+        data-confirm-action="/pegawai/<%= employee.id %>/hapus"
+        data-confirm-title="Hapus pegawai permanen?"
+        data-confirm-message="<%= employee.name %> belum memiliki riwayat penilaian atau perhitungan. Data akan dihapus permanen dan tidak dapat dikembalikan."
+        data-confirm-label="Hapus permanen"
+        data-confirm-tone="danger">Hapus</button>
+    <% } %>
+  </div>
+</header>
+
+<% if (employee.archived_at) { %>
+  <div class="notice notice--warning">
+    <span><strong>Pegawai diarsipkan.</strong> Data historis tetap dapat dilihat, tetapi pegawai tidak termasuk dalam perhitungan TOPSIS dan tidak dapat diberi nilai baru.</span>
+    <a href="/pegawai?arsip=1">Lihat arsip</a>
+  </div>
+<% } %>
+
+<div class="detail-grid">
+  <div class="stack">
+    <section class="panel">
+      <div class="panel__header">
+        <div>
+          <h2 class="panel__title">Identitas pegawai</h2>
+          <p class="panel__subtitle">Data master yang menjadi rujukan penilaian.</p>
+        </div>
+        <span class="badge badge--<%= employee.status === 'aktif' ? 'success' : (employee.status === 'nonaktif' ? 'neutral' : 'accent') %>">
+          <span class="badge__dot" aria-hidden="true"></span><%= statusLabel(employee.status) %>
+        </span>
+      </div>
+      <div class="panel__body">
+        <dl class="meta-list">
+          <dt>Kode pegawai</dt>
+          <dd class="mono"><%= employee.code %></dd>
+          <dt>Nama lengkap</dt>
+          <dd><%= employee.name %></dd>
+          <dt>Jenis kelamin</dt>
+          <dd><%= employee.gender === 'L' ? 'Laki-laki' : (employee.gender === 'P' ? 'Perempuan' : 'Tidak diisi') %></dd>
+          <dt>Jabatan</dt>
+          <dd><%= employee.position %></dd>
+          <dt>Departemen</dt>
+          <dd><%= employee.department %></dd>
+          <dt>Status kepegawaian</dt>
+          <dd><%= statusLabel(employee.status) %></dd>
+          <dt>Keterangan</dt>
+          <dd><%= employee.notes || 'Tidak ada keterangan' %></dd>
+          <dt>Ditambahkan</dt>
+          <dd><%= fmt.dateTime(employee.created_at) %></dd>
+          <dt>Diperbarui</dt>
+          <dd><%= fmt.dateTime(employee.updated_at) %></dd>
+          <% if (employee.archived_at) { %>
+            <dt>Diarsipkan</dt>
+            <dd><%= fmt.dateTime(employee.archived_at) %></dd>
+          <% } %>
+        </dl>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <div>
+          <h2 class="panel__title">Nilai periode berjalan</h2>
+          <p class="panel__subtitle"><%= activePeriod ? activePeriod.name : 'Belum ada periode aktif' %></p>
+        </div>
+        <% if (activePeriod && !employee.archived_at) { %>
+          <a class="btn--link" href="/penilaian/<%= employee.id %>?period=<%= activePeriod.id %>">Ubah nilai</a>
+        <% } %>
+      </div>
+      <% if (!activePeriod) { %>
+        <div class="panel__body">
+          <div class="empty-state empty-state--in-panel">
+            <p class="empty-state__title">Periode aktif belum ditetapkan</p>
+            <p>Tetapkan periode penilaian agar nilai pegawai dapat ditampilkan.</p>
+            <a class="btn btn--secondary btn--sm" href="/periode">Kelola periode</a>
+          </div>
+        </div>
+      <% } else if (currentValues.length > 0) { %>
+        <div class="table-wrap">
+          <table class="table">
+            <caption class="sr-only">Nilai <%= employee.name %> pada periode <%= activePeriod.name %></caption>
+            <thead>
+              <tr>
+                <th scope="col">Kriteria</th>
+                <th scope="col" class="num">Nilai</th>
+                <th scope="col">Satuan</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% currentValues.forEach(function (value) { %>
+                <tr>
+                  <td>
+                    <div class="table__primary"><span class="mono"><%= value.code %></span> <%= value.name %></div>
+                  </td>
+                  <td class="num"><%= fmt.decimal(value.value, 2) %></td>
+                  <td class="muted"><%= value.unit || '-' %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="panel__body">
+          <div class="empty-state empty-state--in-panel">
+            <p class="empty-state__title">Nilai belum diisi</p>
+            <p>Pegawai ini belum memiliki nilai pada <%= activePeriod.name %>. Lengkapi seluruh kriteria aktif agar dapat dihitung.</p>
+            <% if (!employee.archived_at) { %>
+              <a class="btn btn--primary btn--sm" href="/penilaian/<%= employee.id %>?period=<%= activePeriod.id %>">Isi nilai</a>
+            <% } %>
+          </div>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <div>
+          <h2 class="panel__title">Riwayat peringkat</h2>
+          <p class="panel__subtitle">Peringkat dari perhitungan terakhir pada setiap periode.</p>
+        </div>
+      </div>
+      <% if (rankHistory.length > 0) { %>
+        <div class="table-wrap">
+          <table class="table">
+            <caption class="sr-only">Riwayat peringkat <%= employee.name %></caption>
+            <thead>
+              <tr>
+                <th scope="col">Periode</th>
+                <th scope="col">Dihitung</th>
+                <th scope="col" class="num">Peringkat</th>
+                <th scope="col" class="num">Preferensi</th>
+                <th scope="col">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% rankHistory.forEach(function (item) { %>
+                <tr>
+                  <td><%= item.period_name %></td>
+                  <td class="nowrap"><%= fmt.dateTime(item.calculated_at) %></td>
+                  <td class="num"><%= item.rank %></td>
+                  <td class="num"><%= fmt.decimal(item.preference, 4) %></td>
+                  <td><a class="btn--link" href="/peringkat/<%= item.run_id %>/detail/<%= item.detail_id %>">Detail</a></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="panel__body">
+          <div class="empty-state empty-state--in-panel">
+            <p class="empty-state__title">Belum ada riwayat peringkat</p>
+            <p>Peringkat muncul setelah perhitungan TOPSIS dijalankan untuk periode yang memuat pegawai ini.</p>
+          </div>
+        </div>
+      <% } %>
+    </section>
+  </div>
+
+  <aside class="detail-side">
+    <section class="panel">
+      <div class="panel__header">
+        <h2 class="panel__title">Rekap keterlibatan</h2>
+      </div>
+      <div class="panel__body">
+        <dl class="meta-list">
+          <dt>Nilai tersimpan</dt>
+          <dd><%= fmt.integer(assessmentCount) %> baris penilaian</dd>
+          <dt>Hasil perhitungan</dt>
+          <dd><%= fmt.integer(runCount) %> baris hasil</dd>
+          <dt>Periode tercatat</dt>
+          <dd><%= fmt.integer(periodHistory.length) %> periode</dd>
+          <dt>Kriteria aktif</dt>
+          <dd><%= fmt.integer(activeCriteriaCount) %> kriteria</dd>
+        </dl>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h2 class="panel__title">Riwayat periode</h2>
+      </div>
+      <% if (periodHistory.length > 0) { %>
+        <div class="panel__body">
+          <ul class="plain-list">
+            <% periodHistory.forEach(function (item) { %>
+              <li>
+                <strong><%= item.name %></strong><br>
+                <span class="muted"><%= item.start_date ? fmt.dateShort(item.start_date) : 'Tanpa tanggal' %> sampai <%= item.end_date ? fmt.dateShort(item.end_date) : 'tanpa tanggal' %></span><br>
+                <span class="muted"><%= fmt.integer(item.filled) %> nilai pada kriteria aktif</span>
+                <% if (item.is_active) { %><span class="badge badge--accent">Aktif</span><% } %>
+              </li>
+            <% }); %>
+          </ul>
+        </div>
+      <% } else { %>
+        <div class="panel__body">
+          <p class="muted mb-0">Pegawai ini belum memiliki catatan nilai pada periode mana pun.</p>
+        </div>
+      <% } %>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h2 class="panel__title">Catatan</h2>
+      </div>
+      <div class="panel__body">
+        <p class="definition-note">
+          Penghapusan permanen hanya tersedia jika pegawai belum memiliki penilaian atau hasil perhitungan.
+          Untuk menjaga riwayat, gunakan arsip jika data sudah dipakai.
+        </p>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<%- include('../partials/layout-bottom') %>

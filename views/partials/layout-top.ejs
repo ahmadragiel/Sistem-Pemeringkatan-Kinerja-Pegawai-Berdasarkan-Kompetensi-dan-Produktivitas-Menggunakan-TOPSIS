@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= page.title %> | SPK Kinerja Pegawai</title>
+  <meta name="description" content="<%= appTitle %>">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components/page-header.css">
+  <link rel="stylesheet" href="/css/components/buttons.css">
+  <link rel="stylesheet" href="/css/components/forms.css">
+  <link rel="stylesheet" href="/css/components/panels.css">
+  <link rel="stylesheet" href="/css/components/tables.css">
+  <link rel="stylesheet" href="/css/components/pagination.css">
+  <link rel="stylesheet" href="/css/components/feedback.css">
+  <link rel="stylesheet" href="/css/components/detail.css">
+  <link rel="stylesheet" href="/css/components/output.css">
+  <link rel="stylesheet" href="/css/components/dialog.css">
+  <link rel="stylesheet" href="/css/pages/dashboard.css">
+  <link rel="stylesheet" href="/css/pages/process.css">
+  <link rel="stylesheet" href="/css/pages/weights.css">
+  <link rel="stylesheet" href="/css/pages/reports.css">
+  <link rel="stylesheet" href="/css/utilities.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/touch.css">
+  <link rel="stylesheet" href="/css/print.css">
+</head>
+<body data-page="<%= page.active %>">
+  <a class="skip-link" href="#main">Lewati ke konten utama</a>
+  <div class="app-shell">
+    <%- include('sidebar') %>
+    <button type="button" class="sidebar-backdrop" data-sidebar-close aria-label="Tutup menu" hidden></button>
+    <div class="app-body">
+      <%- include('topbar') %>
+      <main id="main" class="main" tabindex="-1">
+        <noscript>
+          <div class="notice notice--warning">
+            <span>JavaScript nonaktif. Navigasi dan formulir tetap dapat digunakan, tetapi menu mobile dan dialog konfirmasi memerlukan JavaScript.</span>
+          </div>
+        </noscript>
+        <%- include('flash') %>

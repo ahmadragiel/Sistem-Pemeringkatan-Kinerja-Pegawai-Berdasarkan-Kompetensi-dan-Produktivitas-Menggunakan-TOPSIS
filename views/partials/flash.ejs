@@ -1,0 +1,6 @@
+<% if (flash) { %>
+  <div class="flash flash--<%= flash.type %>" role="<%= flash.type === 'error' ? 'alert' : 'status' %>">
+    <span><%= flash.message %></span>
+    <button type="button" class="flash__close" data-flash-close>Tutup</button>
+  </div>
+<% } %>

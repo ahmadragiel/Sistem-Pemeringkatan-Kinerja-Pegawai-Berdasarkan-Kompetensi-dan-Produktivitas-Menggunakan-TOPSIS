@@ -1,0 +1,143 @@
+<%- include('../partials/layout-top') %>
+
+<header class="page-header">
+  <div class="page-header__main">
+    <p class="page-header__kicker">Penilaian / <%= period.name %></p>
+    <h1>Nilai <%= employee.name %></h1>
+    <p class="page-header__description">Isi nilai untuk setiap kriteria aktif. Nilai harus berada dalam skala yang ditetapkan kriteria. Kosongkan kolom untuk menghapus nilai yang sudah tersimpan.</p>
+  </div>
+  <div class="page-header__actions">
+    <a class="btn btn--secondary" href="/penilaian?period=<%= period.id %>">Kembali</a>
+  </div>
+</header>
+
+<div class="form-layout">
+  <section class="panel">
+    <div class="panel__header">
+      <div>
+        <h2 class="panel__title">Formulir penilaian</h2>
+        <p class="panel__subtitle"><%= filled %> dari <%= criteria.length %> kriteria sudah memiliki nilai.</p>
+      </div>
+      <% if (filled === criteria.length && criteria.length > 0) { %>
+        <span class="badge badge--success"><span class="badge__dot" aria-hidden="true"></span>Lengkap</span>
+      <% } else { %>
+        <span class="badge badge--warning"><span class="badge__dot" aria-hidden="true"></span>Belum lengkap</span>
+      <% } %>
+    </div>
+    <div class="panel__body">
+      <% if (Object.keys(errors).length > 0) { %>
+        <div class="form-errors" role="alert">
+          <strong>Nilai belum dapat disimpan.</strong>
+          <ul>
+            <% Object.values(errors).forEach(function (message) { %>
+              <li><%= message %></li>
+            <% }); %>
+          </ul>
+        </div>
+      <% } %>
+
+      <% if (criteria.length === 0) { %>
+        <div class="empty-state empty-state--in-panel">
+          <p class="empty-state__title">Belum ada kriteria aktif</p>
+          <p>Nilai tidak dapat diisi sebelum kriteria tersedia.</p>
+          <a class="btn btn--secondary btn--sm" href="/kriteria">Kelola kriteria</a>
+        </div>
+      <% } else { %>
+        <form method="post" action="/penilaian/<%= employee.id %>">
+          <input type="hidden" name="period_id" value="<%= period.id %>">
+          <div class="form-grid">
+            <% criteria.forEach(function (criterion) { %>
+              <%
+                const stored = values.get(criterion.id);
+                const fieldValue = stored === undefined || stored === null ? '' : stored;
+                const fieldError = errors['nilai_' + criterion.id];
+              %>
+              <div class="field">
+                <label for="nilai-<%= criterion.id %>">
+                  <span class="mono"><%= criterion.code %></span> <%= criterion.name %>
+                  <span class="required" aria-hidden="true">*</span>
+                </label>
+                <input
+                  class="input mono"
+                  id="nilai-<%= criterion.id %>"
+                  name="nilai_<%= criterion.id %>"
+                  type="number"
+                  step="0.01"
+                  min="<%= criterion.scale_min %>"
+                  max="<%= criterion.scale_max %>"
+                  value="<%= fieldValue %>"
+                  <%- fieldError ? 'aria-invalid="true" aria-describedby="nilai-error-' + criterion.id + '"' : '' %>>
+                <% if (fieldError) { %>
+                  <p class="field__error" id="nilai-error-<%= criterion.id %>"><%= fieldError %></p>
+                <% } else { %>
+                  <p class="field__hint">
+                    Skala <%= fmt.decimal(criterion.scale_min, 2) %> sampai <%= fmt.decimal(criterion.scale_max, 2) %><%= criterion.unit ? ' / ' + criterion.unit : '' %>.
+                    Atribut <%= attributeLabel(criterion.attribute).toLowerCase() %>.
+                  </p>
+                <% } %>
+                <% if (criterion.rubric) { %>
+                  <details class="rubric">
+                    <summary>Lihat rubrik penilaian</summary>
+                    <p><%= criterion.rubric %></p>
+                  </details>
+                <% } %>
+              </div>
+            <% }); %>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn--primary" data-busy-label="Menyimpan nilai...">Simpan nilai</button>
+            <a class="btn btn--secondary" href="/penilaian?period=<%= period.id %>">Batal</a>
+            <span class="form-actions__note">Nilai kosong menghapus nilai kriteria tersebut.</span>
+          </div>
+        </form>
+      <% } %>
+    </div>
+  </section>
+
+  <aside class="form-layout__side">
+    <section class="panel">
+      <div class="panel__header">
+        <h2 class="panel__title">Pegawai yang dinilai</h2>
+      </div>
+      <div class="panel__body">
+        <dl class="meta-list">
+          <dt>Kode</dt>
+          <dd class="mono"><%= employee.code %></dd>
+          <dt>Nama</dt>
+          <dd><%= employee.name %></dd>
+          <dt>Jabatan</dt>
+          <dd><%= employee.position %></dd>
+          <dt>Departemen</dt>
+          <dd><%= employee.department %></dd>
+          <dt>Status</dt>
+          <dd><%= statusLabel(employee.status) %></dd>
+        </dl>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h2 class="panel__title">Periode</h2>
+      </div>
+      <div class="panel__body">
+        <dl class="meta-list">
+          <dt>Nama</dt>
+          <dd><%= period.name %></dd>
+          <dt>Mulai</dt>
+          <dd><%= period.start_date ? fmt.dateLong(period.start_date) : 'Belum ditetapkan' %></dd>
+          <dt>Selesai</dt>
+          <dd><%= period.end_date ? fmt.dateLong(period.end_date) : 'Belum ditetapkan' %></dd>
+          <dt>Status</dt>
+          <dd><%= period.is_active ? 'Periode aktif' : 'Periode tidak aktif' %></dd>
+        </dl>
+      </div>
+    </section>
+
+    <div class="notice notice--info">
+      <span>Nilai disimpan per pegawai. Perubahan nilai tidak langsung mengubah hasil perhitungan lama; hasil akan ditandai perlu hitung ulang.</span>
+    </div>
+  </aside>
+</div>
+
+<%- include('../partials/layout-bottom') %>

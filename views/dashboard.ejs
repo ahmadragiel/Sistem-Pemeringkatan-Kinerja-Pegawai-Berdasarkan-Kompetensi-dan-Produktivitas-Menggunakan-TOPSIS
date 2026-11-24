@@ -1,0 +1,204 @@
+<%- include('partials/layout-top') %>
+
+<header class="page-header">
+  <div class="page-header__main">
+    <p class="page-header__kicker">Ringkasan<%= activePeriod ? ' / ' + activePeriod.name : '' %></p>
+    <h1>Dashboard</h1>
+    <p class="page-header__description">Gambaran data pegawai, kriteria, penilaian, dan status perhitungan TOPSIS pada periode yang sedang dikerjakan.</p>
+  </div>
+  <div class="page-header__actions">
+    <% if (!activePeriod) { %>
+      <a class="btn btn--primary" href="/periode/baru">Buat periode penilaian</a>
+    <% } else { %>
+      <a class="btn btn--secondary" href="/penilaian?period=<%= activePeriod.id %>">Buka penilaian</a>
+      <a class="btn btn--primary" href="/perhitungan?period=<%= activePeriod.id %>">Perhitungan TOPSIS</a>
+    <% } %>
+  </div>
+</header>
+
+<section class="stat-strip" aria-label="Ringkasan data">
+  <div class="stat">
+    <div class="stat__label">Pegawai aktif</div>
+    <div class="stat__value"><%= fmt.integer(employeeCount) %></div>
+    <div class="stat__note"><%= archivedCount > 0 ? fmt.integer(archivedCount) + ' pegawai diarsipkan' : 'Tidak ada pegawai diarsipkan' %></div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Kriteria aktif</div>
+    <div class="stat__value"><%= fmt.integer(criteriaCount) %></div>
+    <div class="stat__note"><%= criteriaCount > 0 ? 'Aspek kompetensi dan produktivitas' : 'Belum ada kriteria aktif' %></div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Kelengkapan penilaian</div>
+    <div class="stat__value"><%= dataset && dataset.expectedCount > 0 ? fmt.percent(assessmentPercent, 0) : '-' %></div>
+    <div class="stat__note">
+      <% if (!dataset) { %>
+        Periode aktif belum ditetapkan
+      <% } else if (dataset.expectedCount === 0) { %>
+        Belum ada sel penilaian
+      <% } else { %>
+        <%= fmt.integer(dataset.filledCount) %> dari <%= fmt.integer(dataset.expectedCount) %> sel terisi
+      <% } %>
+    </div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Periode aktif</div>
+    <div class="stat__value stat__value--text"><%= activePeriod ? activePeriod.name : 'Belum ditetapkan' %></div>
+    <div class="stat__note">
+      <% if (activePeriod && activePeriod.start_date && activePeriod.end_date) { %>
+        <%= fmt.dateShort(activePeriod.start_date) %> sampai <%= fmt.dateShort(activePeriod.end_date) %>
+      <% } else if (activePeriod) { %>
+        <a href="/periode/<%= activePeriod.id %>/ubah">Lengkapi tanggal periode</a>
+      <% } else { %>
+        <a href="/periode">Tetapkan periode aktif</a>
+      <% } %>
+    </div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Status TOPSIS</div>
+    <div class="stat__value stat__value--text">
+      <% if (calculationStatus === 'calculated') { %>Sudah dihitung
+      <% } else if (calculationStatus === 'stale') { %>Perlu hitung ulang
+      <% } else if (calculationStatus === 'not-calculated') { %>Belum dihitung
+      <% } else { %>Belum ada periode<% } %>
+    </div>
+    <div class="stat__note">
+      <% if (latestRun) { %>
+        <%= fmt.dateTime(latestRun.calculated_at) %>
+      <% } else if (activePeriod) { %>
+        Jalankan perhitungan untuk memperoleh peringkat
+      <% } else { %>
+        Peringkat memerlukan periode dan penilaian
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/dashboard-process') %>
+
+<div class="dashboard-grid">
+  <section class="panel">
+    <div class="panel__header">
+      <div>
+        <h2 class="panel__title">Nilai preferensi tertinggi</h2>
+        <p class="panel__subtitle">Delapan nilai teratas dari perhitungan TOPSIS terakhir pada periode ini.</p>
+      </div>
+      <% if (latestRun) { %>
+        <span class="panel__meta mono">Run #<%= latestRun.id %></span>
+      <% } %>
+    </div>
+    <div class="panel__body">
+      <% if (chartRows.length > 0) { %>
+        <ol class="bar-chart" aria-label="Grafik nilai preferensi delapan pegawai teratas">
+          <% chartRows.forEach(function (row) { %>
+            <li class="bar-chart__row">
+              <span class="bar-chart__rank"><%= String(row.rank).padStart(2, '0') %></span>
+              <span class="bar-chart__name" title="<%= row.employee_name %>"><%= row.employee_name %></span>
+              <span class="bar-chart__track" aria-hidden="true"><span class="bar-chart__bar" style="width: <%= Math.max((row.preference / maxPreference) * 100, 1).toFixed(2) %>%"></span></span>
+              <span class="bar-chart__value"><%= fmt.decimal(row.preference, 4) %></span>
+            </li>
+          <% }); %>
+        </ol>
+      <% } else if (!activePeriod) { %>
+        <div class="empty-state empty-state--in-panel">
+          <p class="empty-state__title">Belum ada periode aktif</p>
+          <p>Peringkat hanya dapat ditampilkan setelah periode penilaian dan proses TOPSIS tersedia.</p>
+          <a class="btn btn--secondary btn--sm" href="/periode">Kelola periode penilaian</a>
+        </div>
+      <% } else { %>
+        <div class="empty-state empty-state--in-panel">
+          <p class="empty-state__title">Peringkat belum tersedia</p>
+          <p>TOPSIS belum dihitung untuk <%= activePeriod.name %>. Jalankan perhitungan setelah seluruh nilai terisi.</p>
+          <a class="btn btn--secondary btn--sm" href="/perhitungan?period=<%= activePeriod.id %>">Buka perhitungan TOPSIS</a>
+        </div>
+      <% } %>
+    </div>
+    <% if (latestRun) { %>
+      <div class="panel__footer">
+        <span class="panel__meta">Diurutkan dari nilai preferensi tertinggi.</span>
+        <a class="btn--link" href="/peringkat?period=<%= activePeriod.id %>">Lihat seluruh peringkat</a>
+      </div>
+    <% } %>
+  </section>
+
+  <div class="dashboard-side">
+    <section class="panel">
+      <div class="panel__header">
+        <div>
+          <h2 class="panel__title">Status perhitungan</h2>
+          <p class="panel__subtitle"><%= activePeriod ? activePeriod.name : 'Belum ada periode aktif' %></p>
+        </div>
+        <% if (stale) { %>
+          <span class="badge badge--warning"><span class="badge__dot" aria-hidden="true"></span>Perlu hitung ulang</span>
+        <% } else if (latestRun) { %>
+          <span class="badge badge--success"><span class="badge__dot" aria-hidden="true"></span>Tersimpan</span>
+        <% } %>
+      </div>
+      <div class="panel__body">
+        <% if (latestRun) { %>
+          <p class="mb-0"><strong>Perhitungan tersimpan.</strong> <%= fmt.integer(latestRun.employee_count) %> alternatif dan <%= fmt.integer(latestRun.criteria_count) %> kriteria dihitung pada <%= fmt.dateTime(latestRun.calculated_at) %>.</p>
+          <% if (stale) { %>
+            <div class="notice notice--warning mt-16">
+              <span>Data kriteria, bobot, pegawai, atau nilai berubah setelah perhitungan terakhir. Hitung ulang agar hasil mencerminkan data terbaru.</span>
+            </div>
+          <% } %>
+          <div class="mt-16">
+            <a class="btn btn--secondary btn--sm" href="/perhitungan?period=<%= activePeriod.id %>">Buka perhitungan</a>
+          </div>
+        <% } else if (dataset) { %>
+          <p class="muted">Pemeriksaan syarat perhitungan saat ini:</p>
+          <ul class="checklist">
+            <% dataset.checks.forEach(function (check) { %>
+              <li class="checklist__item">
+                <span class="checklist__mark checklist__mark--<%= check.ok ? 'ok' : 'fail' %>" aria-hidden="true"><%= check.ok ? 'OK' : '!' %></span>
+                <div>
+                  <p class="checklist__label"><%= check.label %></p>
+                  <p class="checklist__detail"><%= check.detail %></p>
+                </div>
+              </li>
+            <% }); %>
+          </ul>
+          <div class="mt-16">
+            <a class="btn btn--secondary btn--sm" href="/perhitungan?period=<%= activePeriod.id %>">Lihat pemeriksaan lengkap</a>
+          </div>
+        <% } else { %>
+          <div class="empty-state empty-state--in-panel">
+            <p class="empty-state__title">Periode aktif belum ditetapkan</p>
+            <p>Status perhitungan mengikuti periode yang aktif. Tetapkan satu periode terlebih dahulu.</p>
+            <a class="btn btn--secondary btn--sm" href="/periode">Kelola periode</a>
+          </div>
+        <% } %>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <div>
+          <h2 class="panel__title">Aktivitas terbaru</h2>
+          <p class="panel__subtitle">Perubahan data yang tercatat oleh sistem.</p>
+        </div>
+      </div>
+      <div class="panel__body">
+        <% if (activities.length > 0) { %>
+          <ul class="activity-list">
+            <% activities.forEach(function (activity) { %>
+              <li class="activity-item">
+                <span class="activity-item__marker" aria-hidden="true"></span>
+                <div>
+                  <p class="activity-item__text"><%= activity.message %></p>
+                  <p class="activity-item__time"><%= fmt.dateTime(activity.created_at) %></p>
+                </div>
+              </li>
+            <% }); %>
+          </ul>
+        <% } else { %>
+          <div class="empty-state empty-state--in-panel">
+            <p class="empty-state__title">Belum ada aktivitas</p>
+            <p>Perubahan pegawai, kriteria, penilaian, dan perhitungan akan muncul di sini.</p>
+          </div>
+        <% } %>
+      </div>
+    </section>
+  </div>
+</div>
+
+<%- include('partials/layout-bottom') %>

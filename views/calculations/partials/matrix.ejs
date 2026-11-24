@@ -1,0 +1,29 @@
+<div class="table-wrap">
+  <table class="table table--matrix">
+    <caption class="sr-only"><%= caption %></caption>
+    <thead>
+      <tr>
+        <th scope="col">Pegawai</th>
+        <% criteria.forEach(function (criterion, index) { %>
+          <th scope="col" class="num">
+            <span class="table__criterion"><%= criterion.code %></span>
+            <span class="table__criterion-name"><%= labels ? labels[index] : criterion.name %></span>
+          </th>
+        <% }); %>
+      </tr>
+    </thead>
+    <tbody>
+      <% details.forEach(function (detail) { %>
+        <tr>
+          <td>
+            <div class="table__primary"><%= detail.employee_name %></div>
+            <div class="table__sub mono"><%= detail.employee_code %></div>
+          </td>
+          <% detail[valueKey].forEach(function (value) { %>
+            <td class="num"><%= fmt.decimal(value, decimals) %></td>
+          <% }); %>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>

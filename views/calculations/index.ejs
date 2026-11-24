@@ -1,0 +1,215 @@
+<%- include('../partials/layout-top') %>
+
+<header class="page-header">
+  <div class="page-header__main">
+    <p class="page-header__kicker">Analisis</p>
+    <h1>Perhitungan TOPSIS</h1>
+    <p class="page-header__description">Sistem memeriksa kelengkapan data, menghitung enam tahap TOPSIS di server, lalu menyimpan salinan bobot dan nilai sebagai riwayat perhitungan.</p>
+  </div>
+  <div class="page-header__actions">
+    <% if (period) { %>
+      <a class="btn btn--secondary" href="/peringkat?period=<%= period.id %>">Lihat peringkat</a>
+    <% } %>
+  </div>
+</header>
+
+<% if (!period) { %>
+  <div class="empty-state">
+    <p class="empty-state__title">Belum ada periode penilaian</p>
+    <p>Perhitungan TOPSIS memerlukan periode, nilai pegawai, kriteria aktif, dan bobot yang valid. Mulai dengan membuat periode penilaian.</p>
+    <a class="btn btn--primary" href="/periode/baru">Buat periode penilaian</a>
+  </div>
+<% } else { %>
+  <%- include('../partials/period-switch', { periods: periods, period: period, action: '/perhitungan' }) %>
+
+  <% if (latestRun && stale) { %>
+    <div class="notice notice--warning">
+      <span><strong>Hasil terakhir perlu dihitung ulang.</strong> Data pegawai, kriteria, bobot, atau nilai berubah setelah perhitungan terakhir pada <%= fmt.dateTime(latestRun.calculated_at) %>. Hasil lama tetap tersimpan sebagai riwayat.</span>
+      <a href="/perhitungan/<%= latestRun.id %>">Buka hasil lama</a>
+    </div>
+  <% } %>
+
+  <div class="detail-grid">
+    <section class="panel">
+      <div class="panel__header">
+        <div>
+          <h2 class="panel__title">Pemeriksaan syarat perhitungan</h2>
+          <p class="panel__subtitle">Periode <%= period.name %>. Seluruh syarat harus terpenuhi sebelum TOPSIS dijalankan.</p>
+        </div>
+        <% if (dataset.ready) { %>
+          <span class="badge badge--success"><span class="badge__dot" aria-hidden="true"></span>Siap dihitung</span>
+        <% } else { %>
+          <span class="badge badge--warning"><span class="badge__dot" aria-hidden="true"></span>Belum siap</span>
+        <% } %>
+      </div>
+      <div class="panel__body">
+        <ul class="checklist">
+          <% dataset.checks.forEach(function (check) { %>
+            <li class="checklist__item">
+              <span class="checklist__mark checklist__mark--<%= check.ok ? 'ok' : 'fail' %>" aria-hidden="true"><%= check.ok ? 'OK' : '!' %></span>
+              <div>
+                <p class="checklist__label"><%= check.label %></p>
+                <p class="checklist__detail"><%= check.detail %></p>
+              </div>
+            </li>
+          <% }); %>
+        </ul>
+
+        <% if (dataset.issues.length > 0) { %>
+          <div class="notice notice--warning mt-16">
+            <span><strong>Tindakan yang diperlukan.</strong> Perbaiki data berikut agar perhitungan dapat dijalankan.</span>
+          </div>
+          <ul class="plain-list">
+            <% dataset.issues.forEach(function (issue) { %>
+              <li>
+                <%= issue.message %>
+                <% if (issue.href) { %><a href="<%= issue.href %>">Perbaiki</a><% } %>
+              </li>
+            <% }); %>
+          </ul>
+        <% } %>
+      </div>
+    </section>
+
+    <aside class="detail-side">
+      <section class="panel">
+        <div class="panel__header">
+          <h2 class="panel__title">Jalankan perhitungan</h2>
+        </div>
+        <div class="panel__body">
+          <dl class="meta-list">
+            <dt>Periode</dt>
+            <dd><%= period.name %></dd>
+            <dt>Alternatif</dt>
+            <dd><%= fmt.integer(dataset.employees.length) %> pegawai aktif</dd>
+            <dt>Kriteria</dt>
+            <dd><%= fmt.integer(dataset.criteria.length) %> kriteria aktif</dd>
+            <dt>Total bobot</dt>
+            <dd><%= fmt.percent(dataset.totalWeight, 1) %></dd>
+            <dt>Nilai terisi</dt>
+            <dd><%= fmt.integer(dataset.filledCount) %> dari <%= fmt.integer(dataset.expectedCount) %></dd>
+          </dl>
+
+          <form method="post" action="/perhitungan" class="mt-16">
+            <input type="hidden" name="period_id" value="<%= period.id %>">
+            <% if (dataset.ready) { %>
+              <button type="submit" class="btn btn--primary btn--block" data-busy-label="Menghitung...">Jalankan perhitungan TOPSIS</button>
+            <% } else { %>
+              <button type="submit" class="btn btn--primary btn--block" disabled aria-describedby="run-disabled-note">Jalankan perhitungan TOPSIS</button>
+            <% } %>
+          </form>
+          <p class="note-line" id="run-disabled-note">
+            <% if (dataset.ready) { %>
+              Perhitungan menggunakan data saat ini dan menyimpan salinan bobot serta nilai ke riwayat.
+            <% } else { %>
+              Tombol aktif setelah seluruh syarat terpenuhi. Anda tetap dapat membuka halaman data untuk memperbaiki syarat yang belum terpenuhi.
+            <% } %>
+          </p>
+        </div>
+      </section>
+
+      <% if (latestRun) { %>
+        <section class="panel">
+          <div class="panel__header">
+            <div>
+              <h2 class="panel__title">Hasil terakhir</h2>
+              <p class="panel__subtitle">Run #<%= latestRun.id %></p>
+            </div>
+            <% if (stale) { %>
+              <span class="badge badge--warning"><span class="badge__dot" aria-hidden="true"></span>Perlu hitung ulang</span>
+            <% } else { %>
+              <span class="badge badge--success"><span class="badge__dot" aria-hidden="true"></span>Tersimpan</span>
+            <% } %>
+          </div>
+          <div class="panel__body">
+            <dl class="meta-list">
+              <dt>Dihitung</dt>
+              <dd><%= fmt.dateTime(latestRun.calculated_at) %></dd>
+              <dt>Alternatif</dt>
+              <dd><%= fmt.integer(latestRun.employee_count) %> pegawai</dd>
+              <dt>Kriteria</dt>
+              <dd><%= fmt.integer(latestRun.criteria_count) %> kriteria</dd>
+              <dt>Total bobot</dt>
+              <dd><%= fmt.percent(latestRun.weight_total, 1) %></dd>
+            </dl>
+            <div class="mt-16">
+              <a class="btn btn--secondary btn--sm" href="/perhitungan/<%= latestRun.id %>">Buka rincian enam tahap</a>
+            </div>
+          </div>
+        </section>
+      <% } %>
+    </aside>
+  </div>
+
+  <section class="panel mt-24">
+    <div class="panel__header">
+      <div>
+        <h2 class="panel__title">Enam tahap yang dihitung</h2>
+        <p class="panel__subtitle">Setiap tahap disimpan pada hasil perhitungan sehingga dapat diperiksa kembali.</p>
+      </div>
+    </div>
+    <div class="panel__body">
+      <ol class="stage-summary">
+        <li><strong>Matriks keputusan.</strong> Nilai setiap pegawai pada setiap kriteria.</li>
+        <li><strong>Bobot ternormalisasi.</strong> Bobot mentah dibagi total bobot aktif.</li>
+        <li><strong>Normalisasi vektor.</strong> Nilai dibagi akar jumlah kuadrat kolom kriteria.</li>
+        <li><strong>Matriks terbobot.</strong> Nilai ternormalisasi dikalikan bobot ternormalisasi.</li>
+        <li><strong>Solusi ideal.</strong> Nilai terbaik dan terburuk tiap kriteria sesuai atribut benefit atau cost.</li>
+        <li><strong>Jarak dan preferensi.</strong> D+ ke solusi ideal positif, D- ke solusi ideal negatif, lalu preferensi D- dibagi D+ ditambah D-.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="panel mt-24">
+    <div class="panel__header">
+      <div>
+        <h2 class="panel__title">Riwayat perhitungan</h2>
+        <p class="panel__subtitle">Hasil lama disimpan sebagai snapshot dan tidak berubah ketika data master diperbarui.</p>
+      </div>
+      <span class="panel__meta">Menampilkan maksimal 12 run terakhir</span>
+    </div>
+    <% if (runs.length > 0) { %>
+      <div class="table-wrap">
+        <table class="table">
+          <caption class="sr-only">Riwayat perhitungan TOPSIS untuk <%= period.name %></caption>
+          <thead>
+            <tr>
+              <th scope="col">Run</th>
+              <th scope="col">Dihitung</th>
+              <th scope="col" class="num">Pegawai</th>
+              <th scope="col" class="num">Kriteria</th>
+              <th scope="col" class="num">Total bobot</th>
+              <th scope="col">Catatan</th>
+              <th scope="col">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% runs.forEach(function (item, index) { %>
+              <tr>
+                <td class="code">
+                  #<%= item.id %>
+                  <% if (index === 0) { %><span class="badge badge--accent">Terbaru</span><% } %>
+                </td>
+                <td class="nowrap"><%= fmt.dateTime(item.calculated_at) %></td>
+                <td class="num"><%= fmt.integer(item.employee_count) %></td>
+                <td class="num"><%= fmt.integer(item.criteria_count) %></td>
+                <td class="num"><%= fmt.percent(item.weight_total, 1) %></td>
+                <td class="table__sub"><%= item.notes || 'Tidak ada catatan' %></td>
+                <td><a class="btn--link" href="/perhitungan/<%= item.id %>">Buka</a></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="panel__body">
+        <div class="empty-state empty-state--in-panel">
+          <p class="empty-state__title">Belum ada perhitungan tersimpan</p>
+          <p>Riwayat akan terisi setelah perhitungan pertama berhasil dijalankan untuk periode ini.</p>
+        </div>
+      </div>
+    <% } %>
+  </section>
+<% } %>
+
+<%- include('../partials/layout-bottom') %>

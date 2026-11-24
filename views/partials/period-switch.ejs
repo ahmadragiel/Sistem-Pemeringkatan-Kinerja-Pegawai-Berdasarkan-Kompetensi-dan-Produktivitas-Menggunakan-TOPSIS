@@ -1,0 +1,13 @@
+<form method="get" action="<%= action %>" class="filters" aria-label="Pilih periode penilaian">
+  <div class="field">
+    <label for="period-switch">Periode penilaian</label>
+    <select class="select" id="period-switch" name="period">
+      <% periods.forEach(function (item) { %>
+        <option value="<%= item.id %>"<%= period && item.id === period.id ? ' selected' : '' %>><%= item.name %><%= item.is_active ? ' (aktif)' : '' %></option>
+      <% }); %>
+    </select>
+  </div>
+  <div class="filters__actions">
+    <button type="submit" class="btn btn--secondary btn--sm">Tampilkan</button>
+  </div>
+</form>

@@ -1,0 +1,304 @@
+<%- include('../partials/layout-top') %>
+
+<header class="page-header">
+  <div class="page-header__main">
+    <p class="page-header__kicker">Analisis / Perhitungan TOPSIS</p>
+    <h1>Rincian Perhitungan Run #<%= run.id %></h1>
+    <p class="page-header__description">Enam tahap matematis TOPSIS dihitung di server dari data tersimpan. Tujuh langkah proses pada dashboard diringkas menjadi enam tahap di sini: langkah jarak dan preferensi disajikan dalam satu tahap. Seluruh angka berasal dari snapshot perhitungan, bukan nilai yang ditulis ulang di tampilan.</p>
+  </div>
+  <div class="page-header__actions">
+    <a class="btn btn--secondary" href="/perhitungan?period=<%= run.period_id %>">Kembali</a>
+    <a class="btn btn--secondary" href="/peringkat?period=<%= run.period_id %>&run=<%= run.id %>">Hasil peringkat</a>
+    <a class="btn btn--secondary" href="/peringkat/export.csv?run=<%= run.id %>">Unduh CSV</a>
+    <button type="button" class="btn btn--primary" data-print>Cetak</button>
+  </div>
+</header>
+
+<% if (stale) { %>
+  <div class="notice notice--warning">
+    <span><strong>Snapshot ini sudah tidak sesuai data terbaru.</strong> Data berubah setelah perhitungan dijalankan. Angka pada halaman tetap menunjukkan kondisi saat run #<%= run.id %> dibuat.</span>
+    <a href="/perhitungan?period=<%= run.period_id %>">Hitung ulang</a>
+  </div>
+<% } %>
+
+<nav class="stage-nav" aria-label="Tahap perhitungan TOPSIS">
+  <span class="stage-nav__label">Enam tahap matematis</span>
+  <ol>
+    <li><a href="#tahap-1">01 Matriks keputusan</a></li>
+    <li><a href="#tahap-2">02 Bobot</a></li>
+    <li><a href="#tahap-3">03 Normalisasi</a></li>
+    <li><a href="#tahap-4">04 Matriks terbobot</a></li>
+    <li><a href="#tahap-5">05 Solusi ideal</a></li>
+    <li><a href="#tahap-6">06 Jarak dan preferensi</a></li>
+  </ol>
+</nav>
+
+<div class="detail-grid">
+  <div class="stack">
+    <section class="stage" id="tahap-1">
+      <div class="stage__head">
+        <span class="stage__number">01</span>
+        <h2 class="stage__title">Matriks keputusan</h2>
+      </div>
+      <p class="stage__description">Nilai asli setiap alternatif pada setiap kriteria. Nilai ini disalin dari penilaian yang tersimpan saat perhitungan dijalankan.</p>
+      <div class="formula">X = [x<sub>ij</sub>], i = 1 sampai m, j = 1 sampai n</div>
+      <%- include('partials/matrix', {
+        caption: 'Matriks keputusan nilai pegawai per kriteria',
+        details: matrixDetails,
+        criteria: criteria,
+        valueKey: 'values',
+        decimals: 2,
+        labels: null
+      }) %>
+    </section>
+
+    <section class="stage" id="tahap-2">
+      <div class="stage__head">
+        <span class="stage__number">02</span>
+        <h2 class="stage__title">Bobot kriteria ternormalisasi</h2>
+      </div>
+      <p class="stage__description">Bobot mentah dibagi total bobot kriteria aktif. Jumlah bobot ternormalisasi selalu 1. Bobot ini disimpan bersama hasil agar perubahan bobot di kemudian hari tidak mengubah riwayat.</p>
+      <div class="formula">w<sub>j</sub> = bobot mentah<sub>j</sub> / total bobot mentah</div>
+      <div class="table-wrap">
+        <table class="table">
+          <caption class="sr-only">Bobot mentah dan bobot ternormalisasi</caption>
+          <thead>
+            <tr>
+              <th scope="col">Kode</th>
+              <th scope="col">Kriteria</th>
+              <th scope="col">Kategori</th>
+              <th scope="col">Atribut</th>
+              <th scope="col" class="num">Bobot mentah</th>
+              <th scope="col" class="num">Bobot ternormalisasi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% criteria.forEach(function (criterion) { %>
+              <tr>
+                <td class="code"><%= criterion.code %></td>
+                <td><%= criterion.name %></td>
+                <td><span class="category-label category-label--<%= criterion.category %>"><%= categoryLabel(criterion.category) %></span></td>
+                <td><%= attributeLabel(criterion.attribute) %></td>
+                <td class="num"><%= fmt.percent(criterion.weight_raw, 2) %></td>
+                <td class="num"><%= fmt.decimal(criterion.weight_normalized, 6) %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" colspan="4">Total</th>
+              <td class="num"><%= fmt.percent(run.weight_total, 2) %></td>
+              <td class="num"><%= fmt.decimal(1, 6) %></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    <section class="stage" id="tahap-3">
+      <div class="stage__head">
+        <span class="stage__number">03</span>
+        <h2 class="stage__title">Normalisasi vektor</h2>
+      </div>
+      <p class="stage__description">Setiap nilai dibagi panjang vektor kolomnya. Penyebut dihitung dari akar jumlah kuadrat seluruh nilai pada kriteria yang sama. Jika penyebut nol, perhitungan ditolak sebelum snapshot disimpan.</p>
+      <div class="formula">r<sub>ij</sub> = x<sub>ij</sub> / &radic;(&sum;<sub>i=1</sub><sup>m</sup> x<sub>ij</sub><sup>2</sup>)</div>
+      <% const denominatorLabels = criteria.map(function (criterion, index) {
+        return 'Penyebut ' + fmt.decimal(denominators[index], 4);
+      }); %>
+      <%- include('partials/matrix', {
+        caption: 'Matriks ternormalisasi dan penyebut setiap kriteria',
+        details: matrixDetails,
+        criteria: criteria,
+        valueKey: 'normalized',
+        decimals: 6,
+        labels: denominatorLabels
+      }) %>
+    </section>
+
+    <section class="stage" id="tahap-4">
+      <div class="stage__head">
+        <span class="stage__number">04</span>
+        <h2 class="stage__title">Matriks terbobot</h2>
+      </div>
+      <p class="stage__description">Nilai ternormalisasi dikalikan bobot ternormalisasi masing-masing kriteria. Matriks ini menjadi dasar pengukuran jarak ke solusi ideal.</p>
+      <div class="formula">y<sub>ij</sub> = w<sub>j</sub> &times; r<sub>ij</sub></div>
+      <%- include('partials/matrix', {
+        caption: 'Matriks nilai ternormalisasi terbobot',
+        details: matrixDetails,
+        criteria: criteria,
+        valueKey: 'weighted',
+        decimals: 6,
+        labels: null
+      }) %>
+    </section>
+
+    <section class="stage" id="tahap-5">
+      <div class="stage__head">
+        <span class="stage__number">05</span>
+        <h2 class="stage__title">Solusi ideal positif dan negatif</h2>
+      </div>
+      <p class="stage__description">Untuk kriteria benefit, solusi ideal positif adalah nilai terbobot terbesar dan solusi ideal negatif adalah yang terkecil. Untuk kriteria cost, arahnya dibalik.</p>
+      <div class="formula">
+        A<sup>+</sup> = { max y<sub>ij</sub> untuk benefit; min y<sub>ij</sub> untuk cost }<br>
+        A<sup>-</sup> = { min y<sub>ij</sub> untuk benefit; max y<sub>ij</sub> untuk cost }
+      </div>
+      <div class="table-wrap">
+        <table class="table ideal-table">
+          <caption class="sr-only">Solusi ideal positif dan negatif per kriteria</caption>
+          <thead>
+            <tr>
+              <th scope="col">Kode</th>
+              <th scope="col">Kriteria</th>
+              <th scope="col">Atribut</th>
+              <th scope="col" class="num">A+</th>
+              <th scope="col" class="num">A-</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% criteria.forEach(function (criterion, index) { %>
+              <tr>
+                <td class="code"><%= criterion.code %></td>
+                <td><%= criterion.name %></td>
+                <td>
+                  <span class="badge badge--<%= criterion.attribute === 'cost' ? 'warning' : 'neutral' %>"><%= attributeLabel(criterion.attribute) %></span>
+                </td>
+                <td class="num"><%= fmt.decimal(idealPositive[index], 6) %></td>
+                <td class="num"><%= fmt.decimal(idealNegative[index], 6) %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="stage" id="tahap-6">
+      <div class="stage__head">
+        <span class="stage__number">06</span>
+        <h2 class="stage__title">Jarak, nilai preferensi, dan peringkat</h2>
+      </div>
+      <p class="stage__description">D+ mengukur jarak ke solusi ideal positif, D- mengukur jarak ke solusi ideal negatif. Nilai preferensi semakin tinggi ketika alternatif semakin dekat ke solusi ideal positif dan semakin jauh dari solusi ideal negatif. Peringkat memakai urutan kompetisi: preferensi sama memperoleh peringkat sama.</p>
+      <div class="formula">
+        D<sup>+</sup><sub>i</sub> = &radic;(&sum;<sub>j=1</sub><sup>n</sup> (y<sub>ij</sub> - y<sub>j</sub><sup>+</sup>)<sup>2</sup>)<br>
+        D<sup>-</sup><sub>i</sub> = &radic;(&sum;<sub>j=1</sub><sup>n</sup> (y<sub>ij</sub> - y<sub>j</sub><sup>-</sup>)<sup>2</sup>)<br>
+        V<sub>i</sub> = D<sup>-</sup><sub>i</sub> / (D<sup>+</sup><sub>i</sub> + D<sup>-</sup><sub>i</sub>)
+      </div>
+      <h3 class="stage__subhead">Tabel jarak ke solusi ideal</h3>
+      <div class="table-wrap">
+        <table class="table">
+          <caption class="sr-only">Jarak setiap alternatif ke solusi ideal positif dan negatif</caption>
+          <thead>
+            <tr>
+              <th scope="col">Peringkat</th>
+              <th scope="col">Pegawai</th>
+              <th scope="col">Departemen</th>
+              <th scope="col" class="num">D+</th>
+              <th scope="col" class="num">D-</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% ranking.forEach(function (detail) { %>
+              <tr>
+                <td class="num"><%= String(detail.rank).padStart(2, '0') %></td>
+                <td>
+                  <div class="table__primary"><%= detail.employee_name %></div>
+                  <div class="table__sub mono"><%= detail.employee_code %></div>
+                </td>
+                <td><%= detail.employee_department %></td>
+                <td class="num"><%= fmt.decimal(detail.d_plus, 6) %></td>
+                <td class="num"><%= fmt.decimal(detail.d_minus, 6) %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="stage__subhead" id="tahap-7">Nilai preferensi dan peringkat</h3>
+      <p class="stage__note">Preferensi dihitung dari D- dibagi jumlah D+ dan D-. Peringkat 1 berarti paling dekat ke solusi ideal positif dan paling jauh dari solusi ideal negatif.</p>
+      <div class="table-wrap">
+        <table class="table">
+          <caption class="sr-only">Nilai preferensi dan peringkat hasil TOPSIS</caption>
+          <thead>
+            <tr>
+              <th scope="col">Peringkat</th>
+              <th scope="col">Pegawai</th>
+              <th scope="col">Departemen</th>
+              <th scope="col" class="num">Preferensi</th>
+              <th scope="col">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% ranking.forEach(function (detail) { %>
+              <tr>
+                <td class="num"><strong><%= String(detail.rank).padStart(2, '0') %></strong></td>
+                <td>
+                  <div class="table__primary"><%= detail.employee_name %></div>
+                  <div class="table__sub mono"><%= detail.employee_code %></div>
+                </td>
+                <td><%= detail.employee_department %></td>
+                <td class="num"><strong><%= fmt.decimal(detail.preference, 4) %></strong></td>
+                <td><a class="btn--link" href="/peringkat/<%= run.id %>/detail/<%= detail.id %>">Detail</a></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+      <p class="note-line">Nilai preferensi ditampilkan empat angka desimal. Perhitungan internal memakai presisi penuh. Peringkat sama diberikan bila selisih preferensi tidak melebihi toleransi 0,000000001.</p>
+    </section>
+  </div>
+
+  <aside class="detail-side">
+    <section class="panel">
+      <div class="panel__header">
+        <h2 class="panel__title">Identitas perhitungan</h2>
+      </div>
+      <div class="panel__body">
+        <dl class="meta-list">
+          <dt>Run</dt>
+          <dd class="mono">#<%= run.id %></dd>
+          <dt>Metode</dt>
+          <dd><%= run.method %></dd>
+          <dt>Periode</dt>
+          <dd><%= run.period_name %></dd>
+          <dt>Dihitung</dt>
+          <dd><%= fmt.dateTime(run.calculated_at) %></dd>
+          <dt>Alternatif</dt>
+          <dd><%= fmt.integer(run.employee_count) %> pegawai</dd>
+          <dt>Kriteria</dt>
+          <dd><%= fmt.integer(run.criteria_count) %> kriteria</dd>
+          <dt>Total bobot</dt>
+          <dd><%= fmt.percent(run.weight_total, 2) %></dd>
+          <dt>Catatan</dt>
+          <dd><%= run.notes || 'Tidak ada catatan' %></dd>
+        </dl>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h2 class="panel__title">Peringkat teratas</h2>
+      </div>
+      <div class="panel__body">
+        <% const topThree = ranking.slice(0, 3); %>
+        <% if (topThree.length > 0) { %>
+          <ol class="plain-list">
+            <% topThree.forEach(function (detail) { %>
+              <li>
+                <strong>Peringkat <%= detail.rank %></strong><br>
+                <%= detail.employee_name %><br>
+                <span class="mono"><%= fmt.decimal(detail.preference, 4) %></span>
+              </li>
+            <% }); %>
+          </ol>
+        <% } else { %>
+          <p class="muted mb-0">Tidak ada baris hasil pada perhitungan ini.</p>
+        <% } %>
+      </div>
+    </section>
+
+    <div class="notice notice--info">
+      <span>Perhitungan adalah simulasi akademik. Hasil menunjukkan kedekatan terhadap solusi ideal, bukan penilaian mutlak kualitas pribadi.</span>
+    </div>
+  </aside>
+</div>
+
+<%- include('../partials/layout-bottom') %>

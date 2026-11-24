@@ -1,0 +1,30 @@
+<aside id="sidebar" class="sidebar" aria-label="Navigasi utama">
+  <div class="brand">
+    <a class="brand__link" href="/">
+      <span class="brand__mark" aria-hidden="true">SPK</span>
+      <span class="brand__text">
+        <span class="brand__name">Kinerja Pegawai</span>
+        <span class="brand__sub">Sistem Pendukung Keputusan</span>
+      </span>
+    </a>
+    <button type="button" class="sidebar__close" data-sidebar-close aria-label="Tutup menu">Tutup</button>
+  </div>
+  <div class="sidebar__scroll">
+    <% navigation.forEach(function (group) { %>
+      <div class="nav-group">
+        <div class="nav-group__label"><%= group.label %></div>
+        <ul class="nav-list">
+          <% group.items.forEach(function (item) { %>
+            <li>
+              <a class="nav-link" href="<%= item.href %>"<%- item.key === page.active ? ' aria-current="page"' : '' %>><%= item.label %></a>
+            </li>
+          <% }); %>
+        </ul>
+      </div>
+    <% }); %>
+  </div>
+  <div class="sidebar__note">
+    <strong>Data simulasi</strong>
+    Data akademik untuk latihan analisis, bukan data instansi nyata.
+  </div>
+</aside>

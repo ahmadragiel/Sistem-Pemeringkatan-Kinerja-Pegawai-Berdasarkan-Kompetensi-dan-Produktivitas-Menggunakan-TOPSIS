@@ -1,0 +1,121 @@
+<%- include('partials/layout-top') %>
+
+<header class="page-header">
+  <div class="page-header__main">
+    <p class="page-header__kicker">Penilaian</p>
+    <h1>Bobot Kriteria</h1>
+    <p class="page-header__description">Atur tingkat kepentingan setiap kriteria aktif. Bobot boleh ditulis dalam persen, lalu dinormalisasi menjadi total 1 pada saat perhitungan TOPSIS.</p>
+  </div>
+  <div class="page-header__actions">
+    <a class="btn btn--secondary" href="/kriteria">Kelola kriteria</a>
+  </div>
+</header>
+
+<% if (criteria.length > 0) { %>
+  <form method="post" action="/bobot" data-weight-form novalidate>
+    <% if (errors.total) { %>
+      <div class="form-errors" role="alert">
+        <strong>Bobot belum dapat disimpan.</strong>
+        <p><%= errors.total %></p>
+      </div>
+    <% } %>
+
+    <div class="table-wrap">
+      <table class="table weight-table">
+        <caption class="sr-only">Pengaturan bobot kriteria aktif</caption>
+        <thead>
+          <tr>
+            <th scope="col">Kode</th>
+            <th scope="col">Kriteria</th>
+            <th scope="col">Kategori</th>
+            <th scope="col">Atribut</th>
+            <th scope="col">Bobot (persen)</th>
+            <th scope="col">Bobot ternormalisasi</th>
+            <th scope="col">Proporsi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% criteria.forEach(function (criterion) { %>
+            <tr>
+              <td class="code"><%= criterion.code %></td>
+              <td>
+                <div class="table__primary"><%= criterion.name %></div>
+              </td>
+              <td>
+                <span class="category-label category-label--<%= criterion.category %>"><%= categoryLabel(criterion.category) %></span>
+              </td>
+              <td><%= attributeLabel(criterion.attribute) %></td>
+              <td>
+                <label class="sr-only" for="weight-<%= criterion.id %>">Bobot <%= criterion.name %></label>
+                <input
+                  class="input weight-input"
+                  id="weight-<%= criterion.id %>"
+                  name="weight_<%= criterion.id %>"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value="<%= criterion.weight %>"
+                  data-weight-input
+                  data-criterion-id="<%= criterion.id %>"
+                  <%- errors['weight_' + criterion.id] ? 'aria-invalid="true" aria-describedby="weight-error-' + criterion.id + '"' : '' %>>
+                <% if (errors['weight_' + criterion.id]) { %>
+                  <p class="field__error" id="weight-error-<%= criterion.id %>"><%= errors['weight_' + criterion.id] %></p>
+                <% } %>
+              </td>
+              <td class="num"><span data-normalized-for="<%= criterion.id %>"><%= fmt.decimal(criterion.normalized, 4) %></span></td>
+              <td>
+                <div class="weight-bar" aria-hidden="true">
+                  <span style="width: <%= Math.min((criterion.normalized * 100), 100).toFixed(2) %>%"></span>
+                </div>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+      <div class="weight-total">
+        <span>Total bobot saat ini<br><span class="muted">Nilai akan dinormalisasi saat TOPSIS dijalankan.</span></span>
+        <strong data-weight-total><%= fmt.percent(total, 1) %></strong>
+      </div>
+    </div>
+
+    <p class="note-line" data-weight-note>
+      Total bobot saat ini <%= fmt.percent(total, 1) %>. Nilai akan dinormalisasi menjadi total 1 saat TOPSIS dihitung.
+    </p>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn--primary" data-busy-label="Menyimpan...">Simpan bobot</button>
+      <a class="btn btn--secondary" href="/bobot">Batalkan perubahan</a>
+      <span class="form-actions__note">Perubahan bobot membuat hasil perhitungan lama ditandai perlu hitung ulang.</span>
+    </div>
+  </form>
+
+  <section class="panel mt-24">
+    <div class="panel__header">
+      <div>
+        <h2 class="panel__title">Cara pembobotan bekerja</h2>
+        <p class="panel__subtitle">TOPSIS memakai bobot ternormalisasi, bukan angka persen mentah.</p>
+      </div>
+    </div>
+    <div class="panel__body">
+      <dl class="normalization-note">
+        <dt>Bobot mentah</dt>
+        <dd>Angka yang Anda isi pada tabel, dalam persen. Boleh berjumlah selain 100.</dd>
+        <dt>Total bobot</dt>
+        <dd>Jumlah seluruh bobot kriteria aktif.</dd>
+        <dt>Normalisasi</dt>
+        <dd>Bobot ternormalisasi = bobot kriteria dibagi total bobot. Jumlah seluruh bobot ternormalisasi selalu 1.</dd>
+        <dt>Efek</dt>
+        <dd>Kriteria dengan proporsi lebih besar memberi pengaruh lebih kuat pada jarak terhadap solusi ideal.</dd>
+      </dl>
+    </div>
+  </section>
+<% } else { %>
+  <div class="empty-state">
+    <p class="empty-state__title">Belum ada kriteria aktif</p>
+    <p>Bobot hanya dapat diatur untuk kriteria aktif. Tambahkan kriteria atau aktifkan kriteria yang sudah ada terlebih dahulu.</p>
+    <a class="btn btn--primary" href="/kriteria/baru">Tambah kriteria</a>
+  </div>
+<% } %>
+
+<%- include('partials/layout-bottom') %>

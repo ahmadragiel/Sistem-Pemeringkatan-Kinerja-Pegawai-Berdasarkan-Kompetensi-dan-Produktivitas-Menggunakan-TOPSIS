@@ -1,0 +1,155 @@
+<%- include('../partials/layout-top') %>
+
+<header class="page-header">
+  <div class="page-header__main">
+    <p class="page-header__kicker">Analisis</p>
+    <h1>Laporan</h1>
+    <p class="page-header__description">Laporan hasil pemeringkatan periode terpilih. Laporan memakai perhitungan terakhir yang tersimpan dan dapat dicetak atau diunduh sebagai CSV.</p>
+  </div>
+  <div class="page-header__actions">
+    <% if (run) { %>
+      <button type="button" class="btn btn--secondary" data-print>Cetak laporan</button>
+      <a class="btn btn--primary" href="/laporan/export.csv?period=<%= period.id %>">Unduh CSV</a>
+    <% } %>
+  </div>
+</header>
+
+<% if (!period) { %>
+  <div class="empty-state">
+    <p class="empty-state__title">Belum ada periode penilaian</p>
+    <p>Laporan memerlukan periode dan hasil perhitungan TOPSIS yang tersimpan.</p>
+    <a class="btn btn--primary" href="/periode/baru">Buat periode penilaian</a>
+  </div>
+<% } else { %>
+  <div class="report-toolbar">
+    <%- include('../partials/period-switch', { periods: periods, period: period, action: '/laporan' }) %>
+  </div>
+
+  <% if (!run) { %>
+    <div class="empty-state">
+      <p class="empty-state__title">Belum ada hasil untuk dilaporkan</p>
+      <p>Periode <%= period.name %> belum memiliki perhitungan TOPSIS. Jalankan perhitungan setelah data lengkap untuk menghasilkan laporan.</p>
+      <a class="btn btn--primary" href="/perhitungan?period=<%= period.id %>">Buka perhitungan TOPSIS</a>
+    </div>
+  <% } else { %>
+    <% if (stale) { %>
+      <div class="notice notice--warning no-print">
+        <span><strong>Laporan memakai snapshot lama.</strong> Data berubah setelah run #<%= run.id %> dibuat. Laporan tetap menampilkan hasil saat perhitungan tersebut, bukan data terbaru.</span>
+        <a href="/perhitungan?period=<%= period.id %>">Hitung ulang</a>
+      </div>
+    <% } %>
+
+    <article class="report-sheet" aria-label="Laporan hasil pemeringkatan TOPSIS">
+      <header class="report-sheet__header">
+        <div>
+          <p class="report-sheet__system">Sistem Pemeringkatan Kinerja Pegawai Berdasarkan Kompetensi dan Produktivitas Menggunakan TOPSIS</p>
+          <h2 class="report-sheet__title">Laporan Hasil Pemeringkatan Pegawai</h2>
+        </div>
+        <div class="report-sheet__document">
+          <strong>RUN #<%= run.id %></strong>
+          Metode TOPSIS<br>
+          Dicetak <%= fmt.dateLong(generatedAt) %>
+        </div>
+      </header>
+
+      <dl class="report-meta">
+        <dt>Periode penilaian</dt>
+        <dd><%= run.period_name %></dd>
+        <dt>Waktu perhitungan</dt>
+        <dd><%= fmt.dateTime(run.calculated_at) %></dd>
+        <dt>Jumlah alternatif</dt>
+        <dd><%= fmt.integer(run.employee_count) %> pegawai</dd>
+        <dt>Jumlah kriteria</dt>
+        <dd><%= fmt.integer(run.criteria_count) %> kriteria</dd>
+        <dt>Total bobot mentah</dt>
+        <dd><%= fmt.percent(run.weight_total, 2) %></dd>
+        <dt>Catatan perhitungan</dt>
+        <dd><%= run.notes || 'Tidak ada catatan' %></dd>
+      </dl>
+
+      <h2>1. Kriteria dan bobot</h2>
+      <div class="table-wrap">
+        <table class="table">
+          <caption class="sr-only">Kriteria, atribut, dan bobot yang dipakai pada perhitungan</caption>
+          <thead>
+            <tr>
+              <th scope="col">Kode</th>
+              <th scope="col">Kriteria</th>
+              <th scope="col">Kategori</th>
+              <th scope="col">Atribut</th>
+              <th scope="col" class="num">Bobot mentah</th>
+              <th scope="col" class="num">Bobot ternormalisasi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% criteria.forEach(function (criterion) { %>
+              <tr>
+                <td class="code"><%= criterion.code %></td>
+                <td><%= criterion.name %></td>
+                <td><%= categoryLabel(criterion.category) %></td>
+                <td><%= attributeLabel(criterion.attribute) %></td>
+                <td class="num"><%= fmt.percent(criterion.weight_raw, 2) %></td>
+                <td class="num"><%= fmt.decimal(criterion.weight_normalized, 6) %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>2. Hasil pemeringkatan</h2>
+      <div class="table-wrap">
+        <table class="table">
+          <caption class="sr-only">Hasil pemeringkatan pegawai berdasarkan nilai preferensi TOPSIS</caption>
+          <thead>
+            <tr>
+              <th scope="col">Peringkat</th>
+              <th scope="col">Kode</th>
+              <th scope="col">Nama pegawai</th>
+              <th scope="col">Departemen</th>
+              <th scope="col" class="num">D+</th>
+              <th scope="col" class="num">D-</th>
+              <th scope="col" class="num">Preferensi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% details.forEach(function (detail) { %>
+              <tr>
+                <td class="num"><%= detail.rank %></td>
+                <td class="code"><%= detail.employee_code %></td>
+                <td><%= detail.employee_name %></td>
+                <td><%= detail.employee_department %></td>
+                <td class="num"><%= fmt.decimal(detail.d_plus, 6) %></td>
+                <td class="num"><%= fmt.decimal(detail.d_minus, 6) %></td>
+                <td class="num"><strong><%= fmt.decimal(detail.preference, 4) %></strong></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>3. Catatan metode</h2>
+      <p class="definition-note">
+        TOPSIS mengurutkan alternatif berdasarkan kedekatan relatif terhadap solusi ideal positif dan jarak terhadap solusi ideal negatif. Bobot ternormalisasi diperoleh dari bobot mentah dibagi total bobot kriteria aktif. Nilai preferensi dihitung sebagai D- dibagi jumlah D+ dan D-. Peringkat memakai urutan kompetisi, sehingga nilai preferensi yang sama memperoleh peringkat yang sama.
+      </p>
+
+      <p class="report-sheet__note">
+        Data awal aplikasi merupakan simulasi akademik, bukan data instansi nyata. Hasil menunjukkan kedekatan terhadap solusi ideal berdasarkan kriteria dan bobot yang dipilih, bukan penilaian mutlak kualitas pribadi. Laporan ini dihasilkan dari snapshot perhitungan run #<%= run.id %> dan tidak berubah ketika data master diperbarui.
+      </p>
+
+      <div class="report-sheet__signature">
+        <div>
+          <strong>Disusun oleh</strong>
+          Sistem Pendukung Keputusan<br>
+          <%= fmt.dateLong(generatedAt) %>
+        </div>
+        <div>
+          <strong>Dokumen</strong>
+          Laporan run #<%= run.id %><br>
+          Periode <%= run.period_name %>
+        </div>
+      </div>
+    </article>
+  <% } %>
+<% } %>
+
+<%- include('../partials/layout-bottom') %>

@@ -1,0 +1,21 @@
+{
+  "name": "spk-kinerja-pegawai-topsis",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistem Pemeringkatan Kinerja Pegawai Berdasarkan Kompetensi dan Produktivitas Menggunakan TOPSIS",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "dev": "node --watch --disable-warning=ExperimentalWarning server.js",
+    "seed": "node --disable-warning=ExperimentalWarning src/db/seed-cli.js",
+    "db:reset": "node --disable-warning=ExperimentalWarning src/db/reset.js",
+    "test": "node --disable-warning=ExperimentalWarning --test tests/topsis.test.js tests/pages.test.js tests/crud.test.js tests/calculations.test.js"
+  },
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^5.1.0"
+  }
+}

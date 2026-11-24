@@ -1,0 +1,112 @@
+<%- include('../partials/layout-top') %>
+
+<header class="page-header">
+  <div class="page-header__main">
+    <p class="page-header__kicker">Data master / Pegawai</p>
+    <h1><%= mode === 'create' ? 'Tambah Pegawai' : 'Ubah Data Pegawai' %></h1>
+    <p class="page-header__description">Isi identitas pegawai dengan lengkap. Kode pegawai harus unik dan digunakan sebagai identitas pada hasil perhitungan.</p>
+  </div>
+  <div class="page-header__actions">
+    <a class="btn btn--secondary" href="<%= mode === 'create' ? '/pegawai' : '/pegawai/' + employee.id %>">Batal</a>
+  </div>
+</header>
+
+<div class="form-layout">
+  <section class="panel">
+    <div class="panel__body">
+      <% if (Object.keys(errors).length > 0) { %>
+        <div class="form-errors" role="alert">
+          <strong>Data belum dapat disimpan.</strong>
+          <ul>
+            <% Object.values(errors).forEach(function (message) { %>
+              <li><%= message %></li>
+            <% }); %>
+          </ul>
+        </div>
+      <% } %>
+
+      <form method="post" action="<%= mode === 'create' ? '/pegawai' : '/pegawai/' + employee.id %>">
+        <div class="form-grid">
+          <div class="field">
+            <label for="code">Kode pegawai <span class="required" aria-hidden="true">*</span></label>
+            <input class="input mono" id="code" name="code" type="text" value="<%= employee.code %>" maxlength="20" required aria-required="true"<%- errors.code ? ' aria-invalid="true" aria-describedby="code-error"' : '' %>>
+            <% if (errors.code) { %><p class="field__error" id="code-error"><%= errors.code %></p><% } else { %><p class="field__hint">Contoh: PG011. Huruf akan disimpan dalam bentuk kapital.</p><% } %>
+          </div>
+
+          <div class="field">
+            <label for="name">Nama lengkap <span class="required" aria-hidden="true">*</span></label>
+            <input class="input" id="name" name="name" type="text" value="<%= employee.name %>" maxlength="100" required aria-required="true"<%- errors.name ? ' aria-invalid="true" aria-describedby="name-error"' : '' %>>
+            <% if (errors.name) { %><p class="field__error" id="name-error"><%= errors.name %></p><% } %>
+          </div>
+
+          <div class="field">
+            <label for="gender">Jenis kelamin</label>
+            <select class="select" id="gender" name="gender"<%- errors.gender ? ' aria-invalid="true" aria-describedby="gender-error"' : '' %>>
+              <option value="">Tidak diisi</option>
+              <option value="L"<%= employee.gender === 'L' ? ' selected' : '' %>>Laki-laki</option>
+              <option value="P"<%= employee.gender === 'P' ? ' selected' : '' %>>Perempuan</option>
+            </select>
+            <% if (errors.gender) { %><p class="field__error" id="gender-error"><%= errors.gender %></p><% } %>
+          </div>
+
+          <div class="field">
+            <label for="status">Status pegawai <span class="required" aria-hidden="true">*</span></label>
+            <select class="select" id="status" name="status" required aria-required="true"<%- errors.status ? ' aria-invalid="true" aria-describedby="status-error"' : '' %>>
+              <% statuses.forEach(function (status) { %>
+                <option value="<%= status.value %>"<%= employee.status === status.value ? ' selected' : '' %>><%= status.label %></option>
+              <% }); %>
+            </select>
+            <% if (errors.status) { %><p class="field__error" id="status-error"><%= errors.status %></p><% } %>
+          </div>
+
+          <div class="field">
+            <label for="position">Jabatan <span class="required" aria-hidden="true">*</span></label>
+            <input class="input" id="position" name="position" type="text" value="<%= employee.position %>" maxlength="100" required aria-required="true"<%- errors.position ? ' aria-invalid="true" aria-describedby="position-error"' : '' %>>
+            <% if (errors.position) { %><p class="field__error" id="position-error"><%= errors.position %></p><% } %>
+          </div>
+
+          <div class="field">
+            <label for="department">Departemen atau divisi <span class="required" aria-hidden="true">*</span></label>
+            <input class="input" id="department" name="department" type="text" value="<%= employee.department %>" maxlength="100" list="department-options" required aria-required="true"<%- errors.department ? ' aria-invalid="true" aria-describedby="department-error"' : '' %>>
+            <datalist id="department-options">
+              <% departments.forEach(function (department) { %>
+                <option value="<%= department %>"></option>
+              <% }); %>
+            </datalist>
+            <% if (errors.department) { %><p class="field__error" id="department-error"><%= errors.department %></p><% } else { %><p class="field__hint">Dapat memilih departemen yang sudah ada atau menulis nama baru.</p><% } %>
+          </div>
+
+          <div class="field field--full">
+            <label for="notes">Keterangan</label>
+            <textarea class="textarea" id="notes" name="notes" maxlength="500"<%- errors.notes ? ' aria-invalid="true" aria-describedby="notes-error"' : '' %>><%= employee.notes ?? '' %></textarea>
+            <% if (errors.notes) { %><p class="field__error" id="notes-error"><%= errors.notes %></p><% } else { %><p class="field__hint">Opsional, maksimal 500 karakter. Jangan menulis data pribadi yang tidak diperlukan.</p><% } %>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn--primary" data-busy-label="Menyimpan..."><%= mode === 'create' ? 'Simpan pegawai' : 'Simpan perubahan' %></button>
+          <a class="btn btn--secondary" href="<%= mode === 'create' ? '/pegawai' : '/pegawai/' + employee.id %>">Batal</a>
+          <span class="form-actions__note"><span aria-hidden="true">*</span> Wajib diisi.</span>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <aside class="form-layout__side">
+    <section class="panel">
+      <div class="panel__header">
+        <h2 class="panel__title">Catatan pengelolaan</h2>
+      </div>
+      <div class="panel__body">
+        <ul class="plain-list">
+          <li>Kode pegawai menjadi identitas unik pada tabel dan laporan.</li>
+          <li>Status pegawai bersifat administratif. Alternatif TOPSIS adalah seluruh pegawai yang tidak diarsipkan.</li>
+          <li>Arsip mempertahankan nilai dan riwayat perhitungan. Data yang belum memiliki riwayat dapat dihapus permanen.</li>
+          <li>Data simulasi sebaiknya tetap diberi keterangan agar tidak disalahartikan sebagai data instansi nyata.</li>
+        </ul>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<%- include('../partials/layout-bottom') %>

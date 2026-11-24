@@ -1,0 +1,135 @@
+<%- include('../partials/layout-top') %>
+
+<header class="page-header">
+  <div class="page-header__main">
+    <p class="page-header__kicker">Data master</p>
+    <h1>Data Pegawai</h1>
+    <p class="page-header__description">Kelola identitas pegawai yang menjadi alternatif dalam perhitungan TOPSIS. Pegawai yang tidak lagi digunakan dapat diarsipkan tanpa menghapus riwayat.</p>
+  </div>
+  <div class="page-header__actions">
+    <a class="btn btn--primary" href="/pegawai/baru">Tambah pegawai</a>
+  </div>
+</header>
+
+<nav class="subnav" aria-label="Kelompok data pegawai">
+  <a class="subnav__link" href="/pegawai"<%- !filters.archived ? ' aria-current="page"' : '' %>>Pegawai aktif</a>
+  <a class="subnav__link" href="/pegawai?arsip=1"<%- filters.archived ? ' aria-current="page"' : '' %>>Arsip pegawai</a>
+</nav>
+
+<form method="get" action="/pegawai" class="filters" aria-label="Pencarian dan filter pegawai">
+  <% if (filters.archived) { %><input type="hidden" name="arsip" value="1"><% } %>
+  <div class="field">
+    <label for="filter-q">Cari pegawai</label>
+    <input class="input" id="filter-q" type="search" name="q" value="<%= filters.q %>" placeholder="Nama, kode, atau jabatan">
+  </div>
+  <div class="field">
+    <label for="filter-departemen">Departemen</label>
+    <select class="select" id="filter-departemen" name="departemen">
+      <option value="">Semua departemen</option>
+      <% departments.forEach(function (department) { %>
+        <option value="<%= department %>"<%= filters.department === department ? ' selected' : '' %>><%= department %></option>
+      <% }); %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="filter-status">Status pegawai</label>
+    <select class="select" id="filter-status" name="status">
+      <option value="">Semua status</option>
+      <% statuses.forEach(function (status) { %>
+        <option value="<%= status.value %>"<%= filters.status === status.value ? ' selected' : '' %>><%= status.label %></option>
+      <% }); %>
+    </select>
+  </div>
+  <div class="filters__actions">
+    <button type="submit" class="btn btn--secondary btn--sm">Terapkan</button>
+    <a class="btn btn--ghost btn--sm" href="/pegawai<%= filters.archived ? '?arsip=1' : '' %>">Reset</a>
+  </div>
+</form>
+
+<% if (employees.length > 0) { %>
+  <div class="table-wrap">
+    <table class="table">
+      <caption class="sr-only">Daftar pegawai <%= filters.archived ? 'yang diarsipkan' : 'aktif' %></caption>
+      <thead>
+        <tr>
+          <th scope="col">Kode</th>
+          <th scope="col">Nama dan jabatan</th>
+          <th scope="col">Departemen</th>
+          <th scope="col">Status</th>
+          <th scope="col" class="num">Nilai tersimpan</th>
+          <th scope="col">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% employees.forEach(function (employee) { %>
+          <tr>
+            <td class="code"><%= employee.code %></td>
+            <td>
+              <div class="table__primary"><%= employee.name %></div>
+              <div class="table__sub"><%= employee.position %></div>
+            </td>
+            <td><%= employee.department %></td>
+            <td>
+              <span class="badge badge--<%= employee.status === 'aktif' ? 'success' : (employee.status === 'nonaktif' ? 'neutral' : 'accent') %>">
+                <span class="badge__dot" aria-hidden="true"></span><%= statusLabel(employee.status) %>
+              </span>
+              <% if (employee.archived_at) { %>
+                <div class="table__sub">Diarsipkan <%= fmt.dateShort(employee.archived_at) %></div>
+              <% } %>
+            </td>
+            <td class="num"><%= fmt.integer(employee.assessment_count) %></td>
+            <td>
+              <div class="actions">
+                <a class="btn--link" href="/pegawai/<%= employee.id %>">Detail</a>
+                <a class="btn--link" href="/pegawai/<%= employee.id %>/ubah">Ubah</a>
+                <% if (employee.archived_at) { %>
+                  <form class="inline-form" method="post" action="/pegawai/<%= employee.id %>/pulihkan">
+                    <button type="submit" class="btn--link" data-busy-label="Memulihkan...">Pulihkan</button>
+                  </form>
+                <% } else { %>
+                  <button
+                    type="button"
+                    class="btn--link"
+                    data-confirm-action="/pegawai/<%= employee.id %>/arsip"
+                    data-confirm-title="Arsipkan pegawai?"
+                    data-confirm-message="<%= employee.name %> akan dikeluarkan dari daftar alternatif aktif. Riwayat penilaian dan perhitungan tetap tersimpan."
+                    data-confirm-label="Arsipkan"
+                    data-confirm-tone="primary">Arsipkan</button>
+                <% } %>
+                <% if (employee.assessment_count === 0 && employee.run_count === 0) { %>
+                  <button
+                    type="button"
+                    class="btn--link btn--danger-link"
+                    data-confirm-action="/pegawai/<%= employee.id %>/hapus"
+                    data-confirm-title="Hapus pegawai permanen?"
+                    data-confirm-message="<%= employee.name %> belum memiliki riwayat penilaian atau perhitungan. Data akan dihapus permanen."
+                    data-confirm-label="Hapus permanen"
+                    data-confirm-tone="danger">Hapus</button>
+                <% } %>
+              </div>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+  <%- include('../partials/pagination', { pagination: pagination }) %>
+<% } else { %>
+  <div class="empty-state">
+    <% if (filters.archived) { %>
+      <p class="empty-state__title">Belum ada pegawai diarsipkan</p>
+      <p>Pegawai yang diarsipkan akan muncul di sini. Riwayat penilaiannya tetap tersimpan.</p>
+      <a class="btn btn--secondary" href="/pegawai">Kembali ke pegawai aktif</a>
+    <% } else if (filters.q || filters.department || filters.status) { %>
+      <p class="empty-state__title">Tidak ada pegawai yang cocok</p>
+      <p>Ubah kata kunci atau filter yang digunakan untuk menemukan data pegawai.</p>
+      <a class="btn btn--secondary" href="/pegawai">Reset filter</a>
+    <% } else { %>
+      <p class="empty-state__title">Belum ada data pegawai</p>
+      <p>Tambahkan minimal dua pegawai agar TOPSIS memiliki alternatif yang dapat dibandingkan.</p>
+      <a class="btn btn--primary" href="/pegawai/baru">Tambah pegawai pertama</a>
+    <% } %>
+  </div>
+<% } %>
+
+<%- include('../partials/layout-bottom') %>

@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.*
+!.env.example
+npm-debug.log*
+*.log
+coverage/
+data/*.sqlite-wal
+data/*.sqlite-shm

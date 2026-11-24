@@ -1,0 +1,146 @@
+<%- include('../partials/layout-top') %>
+
+<header class="page-header">
+  <div class="page-header__main">
+    <p class="page-header__kicker">Data master / Kriteria</p>
+    <h1><%= mode === 'create' ? 'Tambah Kriteria' : 'Ubah Kriteria' %></h1>
+    <p class="page-header__description">Tentukan identitas, bobot, atribut, dan skala nilai kriteria. Perubahan berlaku untuk perhitungan berikutnya tanpa mengubah hasil yang sudah tersimpan.</p>
+  </div>
+  <div class="page-header__actions">
+    <a class="btn btn--secondary" href="/kriteria">Batal</a>
+  </div>
+</header>
+
+<div class="form-layout">
+  <section class="panel">
+    <div class="panel__body">
+      <% if (Object.keys(errors).length > 0) { %>
+        <div class="form-errors" role="alert">
+          <strong>Data belum dapat disimpan.</strong>
+          <ul>
+            <% Object.values(errors).forEach(function (message) { %>
+              <li><%= message %></li>
+            <% }); %>
+          </ul>
+        </div>
+      <% } %>
+
+      <form method="post" action="<%= mode === 'create' ? '/kriteria' : '/kriteria/' + criterion.id %>">
+        <div class="form-grid">
+          <div class="field">
+            <label for="code">Kode kriteria <span class="required" aria-hidden="true">*</span></label>
+            <input class="input mono" id="code" name="code" type="text" value="<%= criterion.code %>" maxlength="10" required aria-required="true"<%- errors.code ? ' aria-invalid="true" aria-describedby="code-error"' : '' %>>
+            <% if (errors.code) { %><p class="field__error" id="code-error"><%= errors.code %></p><% } else { %><p class="field__hint">Contoh: C1. Unik dan dipakai sebagai kolom pada matriks.</p><% } %>
+          </div>
+
+          <div class="field">
+            <label for="name">Nama kriteria <span class="required" aria-hidden="true">*</span></label>
+            <input class="input" id="name" name="name" type="text" value="<%= criterion.name %>" maxlength="120" required aria-required="true"<%- errors.name ? ' aria-invalid="true" aria-describedby="name-error"' : '' %>>
+            <% if (errors.name) { %><p class="field__error" id="name-error"><%= errors.name %></p><% } %>
+          </div>
+
+          <div class="field">
+            <label for="category">Kategori <span class="required" aria-hidden="true">*</span></label>
+            <select class="select" id="category" name="category" required aria-required="true"<%- errors.category ? ' aria-invalid="true" aria-describedby="category-error"' : '' %>>
+              <% categories.forEach(function (category) { %>
+                <option value="<%= category.value %>"<%= criterion.category === category.value ? ' selected' : '' %>><%= category.label %></option>
+              <% }); %>
+            </select>
+            <% if (errors.category) { %><p class="field__error" id="category-error"><%= errors.category %></p><% } %>
+          </div>
+
+          <div class="field">
+            <label for="attribute">Atribut <span class="required" aria-hidden="true">*</span></label>
+            <select class="select" id="attribute" name="attribute" required aria-required="true"<%- errors.attribute ? ' aria-invalid="true" aria-describedby="attribute-error"' : '' %>>
+              <% attributes.forEach(function (attribute) { %>
+                <option value="<%= attribute.value %>"<%= criterion.attribute === attribute.value ? ' selected' : '' %>><%= attribute.label %></option>
+              <% }); %>
+            </select>
+            <% if (errors.attribute) { %><p class="field__error" id="attribute-error"><%= errors.attribute %></p><% } else { %><p class="field__hint">Benefit: nilai lebih tinggi lebih baik. Cost: nilai lebih rendah lebih baik.</p><% } %>
+          </div>
+
+          <div class="field">
+            <label for="weight">Bobot awal (persen) <span class="required" aria-hidden="true">*</span></label>
+            <input class="input mono" id="weight" name="weight" type="number" min="0" max="100" step="0.01" value="<%= criterion.weight %>" required aria-required="true"<%- errors.weight ? ' aria-invalid="true" aria-describedby="weight-error"' : '' %>>
+            <% if (errors.weight) { %><p class="field__error" id="weight-error"><%= errors.weight %></p><% } else { %><p class="field__hint">Bobot seluruh kriteria aktif akan dinormalisasi agar totalnya 1.</p><% } %>
+          </div>
+
+          <div class="field">
+            <label for="sort_order">Urutan tampilan <span class="required" aria-hidden="true">*</span></label>
+            <input class="input mono" id="sort_order" name="sort_order" type="number" min="0" step="1" value="<%= criterion.sort_order %>" required aria-required="true"<%- errors.sort_order ? ' aria-invalid="true" aria-describedby="sort-order-error"' : '' %>>
+            <% if (errors.sort_order) { %><p class="field__error" id="sort-order-error"><%= errors.sort_order %></p><% } else { %><p class="field__hint">Menentukan urutan kolom pada matriks dan laporan.</p><% } %>
+          </div>
+
+          <div class="field">
+            <label for="scale_min">Skala minimum <span class="required" aria-hidden="true">*</span></label>
+            <input class="input mono" id="scale_min" name="scale_min" type="number" step="0.01" value="<%= criterion.scale_min %>" required aria-required="true"<%- errors.scale_min ? ' aria-invalid="true" aria-describedby="scale-min-error"' : '' %>>
+            <% if (errors.scale_min) { %><p class="field__error" id="scale-min-error"><%= errors.scale_min %></p><% } %>
+          </div>
+
+          <div class="field">
+            <label for="scale_max">Skala maksimum <span class="required" aria-hidden="true">*</span></label>
+            <input class="input mono" id="scale_max" name="scale_max" type="number" step="0.01" value="<%= criterion.scale_max %>" required aria-required="true"<%- errors.scale_min ? ' aria-invalid="true" aria-describedby="scale-min-error"' : '' %>>
+            <p class="field__hint">Harus lebih besar dari skala minimum.</p>
+          </div>
+
+          <div class="field">
+            <label for="unit">Satuan</label>
+            <input class="input" id="unit" name="unit" type="text" value="<%= criterion.unit ?? '' %>" maxlength="30"<%- errors.unit ? ' aria-invalid="true" aria-describedby="unit-error"' : '' %>>
+            <% if (errors.unit) { %><p class="field__error" id="unit-error"><%= errors.unit %></p><% } else { %><p class="field__hint">Contoh: skor 1-5, unit per bulan, atau persen.</p><% } %>
+          </div>
+
+          <div class="field field--full">
+            <label for="description">Deskripsi</label>
+            <textarea class="textarea" id="description" name="description" maxlength="1000"<%- errors.description ? ' aria-invalid="true" aria-describedby="description-error"' : '' %>><%= criterion.description ?? '' %></textarea>
+            <% if (errors.description) { %><p class="field__error" id="description-error"><%= errors.description %></p><% } else { %><p class="field__hint">Jelaskan apa yang diukur oleh kriteria ini agar penilai memiliki pemahaman yang sama.</p><% } %>
+          </div>
+
+          <div class="field field--full">
+            <label for="rubric">Rubrik penilaian</label>
+            <textarea class="textarea" id="rubric" name="rubric" maxlength="3000"<%- errors.rubric ? ' aria-invalid="true" aria-describedby="rubric-error"' : '' %>><%= criterion.rubric ?? '' %></textarea>
+            <% if (errors.rubric) { %><p class="field__error" id="rubric-error"><%= errors.rubric %></p><% } else { %><p class="field__hint">Opsional. Uraikan makna setiap tingkat skor agar penilaian konsisten.</p><% } %>
+          </div>
+
+          <div class="field field--full">
+            <div class="checkbox-row">
+              <input type="checkbox" id="is_active" name="is_active" value="1"<%= criterion.is_active ? ' checked' : '' %>>
+              <label for="is_active">Kriteria aktif dan digunakan dalam perhitungan</label>
+            </div>
+            <% if (errors.is_active) { %><p class="field__error"><%= errors.is_active %></p><% } %>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn--primary" data-busy-label="Menyimpan..."><%= mode === 'create' ? 'Simpan kriteria' : 'Simpan perubahan' %></button>
+          <a class="btn btn--secondary" href="/kriteria">Batal</a>
+          <span class="form-actions__note"><span aria-hidden="true">*</span> Wajib diisi.</span>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <aside class="form-layout__side">
+    <section class="panel">
+      <div class="panel__header">
+        <h2 class="panel__title">Panduan singkat</h2>
+      </div>
+      <div class="panel__body">
+        <ul class="plain-list">
+          <li><strong>Kompetensi</strong> mengukur pengetahuan, keterampilan, dan kemampuan pemecahan masalah.</li>
+          <li><strong>Produktivitas</strong> mengukur hasil kerja seperti kuantitas, kualitas, dan ketepatan waktu.</li>
+          <li><strong>Skala</strong> menentukan batas nilai yang sah. Nilai di luar rentang akan ditolak saat penilaian disimpan.</li>
+          <li><strong>Bobot</strong> tidak harus berjumlah 100. Sistem menormalisasi total bobot aktif menjadi 1 sebelum TOPSIS.</li>
+          <li>Kriteria yang sudah dipakai tidak dapat dihapus permanen. Nonaktifkan agar riwayat tetap utuh.</li>
+        </ul>
+      </div>
+    </section>
+
+    <% if (mode === 'edit' && criterion.assessment_count) { %>
+      <div class="notice notice--warning">
+        <span>Kriteria ini sudah memiliki nilai tersimpan. Perubahan skala harus tetap mencakup seluruh nilai lama.</span>
+      </div>
+    <% } %>
+  </aside>
+</div>
+
+<%- include('../partials/layout-bottom') %>

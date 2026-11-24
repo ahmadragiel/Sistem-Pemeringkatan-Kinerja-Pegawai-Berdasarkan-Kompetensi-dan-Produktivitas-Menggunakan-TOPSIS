@@ -1,0 +1,144 @@
+<%- include('../partials/layout-top') %>
+
+<header class="page-header">
+  <div class="page-header__main">
+    <p class="page-header__kicker">Analisis</p>
+    <h1>Hasil Pemeringkatan</h1>
+    <p class="page-header__description">Peringkat ditampilkan hanya dari perhitungan TOPSIS yang tersimpan. Setiap hasil memakai snapshot nilai dan bobot pada saat perhitungan dijalankan.</p>
+  </div>
+  <div class="page-header__actions">
+    <% if (run) { %>
+      <button type="button" class="btn btn--secondary" data-print>Cetak</button>
+      <a class="btn btn--primary" href="/peringkat/export.csv?run=<%= run.id %>">Unduh CSV</a>
+    <% } %>
+  </div>
+</header>
+
+<% if (!period) { %>
+  <div class="empty-state">
+    <p class="empty-state__title">Belum ada periode penilaian</p>
+    <p>Peringkat memerlukan periode, nilai pegawai, dan perhitungan TOPSIS yang tersimpan.</p>
+    <a class="btn btn--primary" href="/periode/baru">Buat periode penilaian</a>
+  </div>
+<% } else { %>
+  <%- include('../partials/period-switch', { periods: periods, period: period, action: '/peringkat' }) %>
+
+  <% if (runs.length > 0) { %>
+    <form method="get" action="/peringkat" class="filters" aria-label="Pilih riwayat perhitungan">
+      <input type="hidden" name="period" value="<%= period.id %>">
+      <% if (q) { %><input type="hidden" name="q" value="<%= q %>"><% } %>
+      <div class="field">
+        <label for="run-select">Riwayat perhitungan</label>
+        <select class="select" id="run-select" name="run">
+          <% runs.forEach(function (item, index) { %>
+            <option value="<%= item.id %>"<%= run && item.id === run.id ? ' selected' : '' %>>
+              Run #<%= item.id %>, <%= fmt.dateTime(item.calculated_at) %><%= index === 0 ? ' (terbaru)' : '' %>
+            </option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="filters__actions">
+        <button type="submit" class="btn btn--secondary btn--sm">Tampilkan</button>
+      </div>
+    </form>
+  <% } %>
+
+  <% if (!run) { %>
+    <div class="empty-state">
+      <p class="empty-state__title">Belum ada hasil perhitungan</p>
+      <p>Peringkat tidak ditampilkan sebelum TOPSIS dijalankan. Periksa kelengkapan data lalu simpan perhitungan untuk periode <%= period.name %>.</p>
+      <a class="btn btn--primary" href="/perhitungan?period=<%= period.id %>">Buka perhitungan TOPSIS</a>
+    </div>
+  <% } else { %>
+    <% if (stale) { %>
+      <div class="notice notice--warning">
+        <span><strong>Hasil ini berasal dari snapshot lama.</strong> Data berubah setelah run #<%= run.id %> dibuat. Peringkat di bawah tetap menggambarkan kondisi saat perhitungan tersebut, bukan data terbaru.</span>
+        <a href="/perhitungan?period=<%= period.id %>">Hitung ulang</a>
+      </div>
+    <% } %>
+
+    <section class="panel">
+      <div class="panel__header">
+        <div>
+          <h2 class="panel__title">Hasil run #<%= run.id %></h2>
+          <p class="panel__subtitle">Periode <%= run.period_name %>, dihitung <%= fmt.dateTime(run.calculated_at) %></p>
+        </div>
+        <span class="panel__meta"><%= fmt.integer(totalRows) %> baris hasil</span>
+      </div>
+      <div class="panel__body">
+        <dl class="meta-list">
+          <dt>Metode</dt>
+          <dd><%= run.method %></dd>
+          <dt>Alternatif</dt>
+          <dd><%= fmt.integer(run.employee_count) %> pegawai</dd>
+          <dt>Kriteria</dt>
+          <dd><%= fmt.integer(run.criteria_count) %> kriteria</dd>
+          <dt>Total bobot mentah</dt>
+          <dd><%= fmt.percent(run.weight_total, 2) %></dd>
+          <dt>Catatan</dt>
+          <dd><%= run.notes || 'Tidak ada catatan' %></dd>
+        </dl>
+        <div class="mt-16">
+          <a class="btn btn--secondary btn--sm" href="/perhitungan/<%= run.id %>">Periksa enam tahap perhitungan</a>
+        </div>
+      </div>
+    </section>
+
+    <form method="get" action="/peringkat" class="filters mt-16" aria-label="Pencarian dalam hasil peringkat">
+      <input type="hidden" name="period" value="<%= period.id %>">
+      <input type="hidden" name="run" value="<%= run.id %>">
+      <div class="field">
+        <label for="filter-q">Cari dalam hasil</label>
+        <input class="input" id="filter-q" type="search" name="q" value="<%= q %>" placeholder="Nama, kode, atau departemen">
+      </div>
+      <div class="filters__actions">
+        <button type="submit" class="btn btn--secondary btn--sm">Cari</button>
+        <a class="btn btn--ghost btn--sm" href="/peringkat?period=<%= period.id %>&run=<%= run.id %>">Reset</a>
+      </div>
+    </form>
+
+    <% if (rows.length > 0) { %>
+      <div class="table-wrap mt-16">
+        <table class="table">
+          <caption class="sr-only">Peringkat pegawai berdasarkan nilai preferensi TOPSIS</caption>
+          <thead>
+            <tr>
+              <th scope="col">Peringkat</th>
+              <th scope="col">Pegawai</th>
+              <th scope="col">Departemen</th>
+              <th scope="col" class="num">D+</th>
+              <th scope="col" class="num">D-</th>
+              <th scope="col" class="num">Preferensi</th>
+              <th scope="col">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% rows.forEach(function (row) { %>
+              <tr>
+                <td class="num"><%= String(row.rank).padStart(2, '0') %></td>
+                <td>
+                  <div class="table__primary"><%= row.employee_name %></div>
+                  <div class="table__sub"><span class="mono"><%= row.employee_code %></span> / <%= row.employee_position %></div>
+                </td>
+                <td><%= row.employee_department %></td>
+                <td class="num"><%= fmt.decimal(row.d_plus, 6) %></td>
+                <td class="num"><%= fmt.decimal(row.d_minus, 6) %></td>
+                <td class="num"><strong><%= fmt.decimal(row.preference, 4) %></strong></td>
+                <td><a class="btn--link" href="/peringkat/<%= run.id %>/detail/<%= row.id %>">Detail</a></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+      <p class="note-line">Peringkat memakai urutan kompetisi. Pegawai dengan nilai preferensi sama memperoleh peringkat yang sama, lalu urutan kode pegawai menentukan tampilan.</p>
+    <% } else { %>
+      <div class="empty-state mt-16">
+        <p class="empty-state__title">Tidak ada baris yang cocok</p>
+        <p>Kata kunci tidak menemukan pegawai pada hasil run ini. Reset pencarian untuk melihat seluruh peringkat.</p>
+        <a class="btn btn--secondary" href="/peringkat?period=<%= period.id %>&run=<%= run.id %>">Reset pencarian</a>
+      </div>
+    <% } %>
+  <% } %>
+<% } %>
+
+<%- include('../partials/layout-bottom') %>

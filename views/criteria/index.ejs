@@ -1,0 +1,152 @@
+<%- include('../partials/layout-top') %>
+
+<header class="page-header">
+  <div class="page-header__main">
+    <p class="page-header__kicker">Data master</p>
+    <h1>Data Kriteria</h1>
+    <p class="page-header__description">Kriteria adalah dimensi penilaian yang digunakan TOPSIS. Bobot, atribut benefit atau cost, dan skala nilai disimpan sebagai bagian dari data master.</p>
+  </div>
+  <div class="page-header__actions">
+    <a class="btn btn--secondary" href="/bobot">Atur bobot</a>
+    <a class="btn btn--primary" href="/kriteria/baru">Tambah kriteria</a>
+  </div>
+</header>
+
+<section class="stat-strip stat-strip--3" aria-label="Ringkasan kriteria">
+  <div class="stat">
+    <div class="stat__label">Kriteria aktif</div>
+    <div class="stat__value"><%= fmt.integer(summary.active_count || 0) %></div>
+    <div class="stat__note">Dipakai dalam perhitungan TOPSIS</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Total bobot aktif</div>
+    <div class="stat__value"><%= fmt.percent(summary.active_weight || 0, 1) %></div>
+    <div class="stat__note">Dinormalisasi menjadi 1 saat perhitungan</div>
+  </div>
+  <div class="stat">
+    <div class="stat__label">Seluruh kriteria</div>
+    <div class="stat__value"><%= fmt.integer(summary.total_count || 0) %></div>
+    <div class="stat__note">Termasuk kriteria nonaktif</div>
+  </div>
+</section>
+
+<form method="get" action="/kriteria" class="filters" aria-label="Pencarian dan filter kriteria">
+  <div class="field">
+    <label for="filter-q">Cari kriteria</label>
+    <input class="input" id="filter-q" type="search" name="q" value="<%= filters.q %>" placeholder="Kode, nama, atau deskripsi">
+  </div>
+  <div class="field">
+    <label for="filter-kategori">Kategori</label>
+    <select class="select" id="filter-kategori" name="kategori">
+      <option value="">Semua kategori</option>
+      <% categories.forEach(function (category) { %>
+        <option value="<%= category.value %>"<%= filters.category === category.value ? ' selected' : '' %>><%= category.label %></option>
+      <% }); %>
+    </select>
+  </div>
+  <div class="field">
+    <label for="filter-status">Status</label>
+    <select class="select" id="filter-status" name="status">
+      <option value="">Semua status</option>
+      <option value="aktif"<%= filters.status === 'aktif' ? ' selected' : '' %>>Aktif</option>
+      <option value="nonaktif"<%= filters.status === 'nonaktif' ? ' selected' : '' %>>Nonaktif</option>
+    </select>
+  </div>
+  <div class="filters__actions">
+    <button type="submit" class="btn btn--secondary btn--sm">Terapkan</button>
+    <a class="btn btn--ghost btn--sm" href="/kriteria">Reset</a>
+  </div>
+</form>
+
+<% if (criteria.length > 0) { %>
+  <div class="table-wrap">
+    <table class="table table--criteria">
+      <caption class="sr-only">Daftar kriteria penilaian</caption>
+      <thead>
+        <tr>
+          <th scope="col">Kode</th>
+          <th scope="col">Kriteria</th>
+          <th scope="col">Kategori</th>
+          <th scope="col">Atribut</th>
+          <th scope="col" class="num">Bobot</th>
+          <th scope="col">Skala</th>
+          <th scope="col">Status</th>
+          <th scope="col">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% criteria.forEach(function (criterion) { %>
+          <tr>
+            <td class="code"><%= criterion.code %></td>
+            <td>
+              <div class="table__primary"><%= criterion.name %></div>
+              <% if (criterion.description) { %>
+                <div class="table__sub"><%= criterion.description %></div>
+              <% } %>
+              <% if (criterion.assessment_count > 0) { %>
+                <div class="table__sub"><%= fmt.integer(criterion.assessment_count) %> nilai tersimpan</div>
+              <% } %>
+            </td>
+            <td>
+              <span class="category-label category-label--<%= criterion.category %>"><%= categoryLabel(criterion.category) %></span>
+            </td>
+            <td>
+              <span class="badge badge--<%= criterion.attribute === 'cost' ? 'warning' : 'neutral' %>"><%= attributeLabel(criterion.attribute) %></span>
+            </td>
+            <td class="num"><%= fmt.percent(criterion.weight, 1) %></td>
+            <td class="nowrap">
+              <%= fmt.decimal(criterion.scale_min, 2) %> sampai <%= fmt.decimal(criterion.scale_max, 2) %>
+              <% if (criterion.unit) { %><div class="table__sub"><%= criterion.unit %></div><% } %>
+            </td>
+            <td>
+              <% if (criterion.is_active) { %>
+                <span class="badge badge--success"><span class="badge__dot" aria-hidden="true"></span>Aktif</span>
+              <% } else { %>
+                <span class="badge badge--neutral"><span class="badge__dot" aria-hidden="true"></span>Nonaktif</span>
+              <% } %>
+              <% if (criterion.run_count > 0) { %>
+                <div class="table__sub">Dipakai <%= fmt.integer(criterion.run_count) %> hasil</div>
+              <% } %>
+            </td>
+            <td>
+              <div class="actions">
+                <a class="btn--link" href="/kriteria/<%= criterion.id %>/ubah">Ubah</a>
+                <form class="inline-form" method="post" action="/kriteria/<%= criterion.id %>/toggle">
+                  <button type="submit" class="btn--link" data-busy-label="Menyimpan..."><%= criterion.is_active ? 'Nonaktifkan' : 'Aktifkan' %></button>
+                </form>
+                <% if (criterion.assessment_count === 0 && criterion.run_count === 0) { %>
+                  <button
+                    type="button"
+                    class="btn--link btn--danger-link"
+                    data-confirm-action="/kriteria/<%= criterion.id %>/hapus"
+                    data-confirm-title="Hapus kriteria permanen?"
+                    data-confirm-message="Kriteria <%= criterion.code %> <%= criterion.name %> belum dipakai dalam penilaian atau perhitungan. Data akan dihapus permanen."
+                    data-confirm-label="Hapus permanen"
+                    data-confirm-tone="danger">Hapus</button>
+                <% } %>
+              </div>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+<% } else { %>
+  <div class="empty-state">
+    <% if (filters.q || filters.category || filters.status) { %>
+      <p class="empty-state__title">Tidak ada kriteria yang cocok</p>
+      <p>Ubah kata kunci atau filter untuk menemukan kriteria yang dicari.</p>
+      <a class="btn btn--secondary" href="/kriteria">Reset filter</a>
+    <% } else { %>
+      <p class="empty-state__title">Belum ada kriteria</p>
+      <p>Tambahkan kriteria kompetensi dan produktivitas. TOPSIS memerlukan setidaknya satu kriteria dengan total bobot lebih dari nol.</p>
+      <a class="btn btn--primary" href="/kriteria/baru">Tambah kriteria pertama</a>
+    <% } %>
+  </div>
+<% } %>
+
+<div class="notice notice--info mt-24">
+  <span><strong>Tentang atribut.</strong> Kriteria benefit memberi nilai lebih baik pada angka yang lebih tinggi. Kriteria cost memberi nilai lebih baik pada angka yang lebih rendah. Saat ini seluruh kriteria contoh adalah benefit karena skor penilaian disusun dengan arah yang sama.</span>
+</div>
+
+<%- include('../partials/layout-bottom') %>

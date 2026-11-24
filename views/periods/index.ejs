@@ -1,0 +1,93 @@
+<%- include('../partials/layout-top') %>
+
+<header class="page-header">
+  <div class="page-header__main">
+    <p class="page-header__kicker">Data master</p>
+    <h1>Periode Penilaian</h1>
+    <p class="page-header__description">Setiap penilaian dan perhitungan terikat pada satu periode. Riwayat periode lama tetap tersimpan ketika periode baru ditambahkan.</p>
+  </div>
+  <div class="page-header__actions">
+    <a class="btn btn--primary" href="/periode/baru">Tambah periode</a>
+  </div>
+</header>
+
+<% if (periods.length > 0) { %>
+  <div class="table-wrap">
+    <table class="table">
+      <caption class="sr-only">Daftar periode penilaian</caption>
+      <thead>
+        <tr>
+          <th scope="col">Periode</th>
+          <th scope="col">Rentang tanggal</th>
+          <th scope="col">Status</th>
+          <th scope="col" class="num">Nilai</th>
+          <th scope="col" class="num">Perhitungan</th>
+          <th scope="col">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% periods.forEach(function (period) { %>
+          <tr>
+            <td>
+              <div class="table__primary"><%= period.name %></div>
+              <% if (period.notes) { %><div class="table__sub"><%= period.notes %></div><% } %>
+            </td>
+            <td class="nowrap">
+              <% if (period.start_date && period.end_date) { %>
+                <%= fmt.dateShort(period.start_date) %> sampai <%= fmt.dateShort(period.end_date) %>
+              <% } else if (period.start_date) { %>
+                Mulai <%= fmt.dateShort(period.start_date) %>
+              <% } else if (period.end_date) { %>
+                Sampai <%= fmt.dateShort(period.end_date) %>
+              <% } else { %>
+                <span class="muted">Belum ditetapkan</span>
+              <% } %>
+            </td>
+            <td>
+              <% if (period.is_active) { %>
+                <span class="badge badge--success"><span class="badge__dot" aria-hidden="true"></span>Aktif</span>
+              <% } else { %>
+                <span class="badge badge--neutral"><span class="badge__dot" aria-hidden="true"></span>Tidak aktif</span>
+              <% } %>
+            </td>
+            <td class="num"><%= fmt.integer(period.assessment_count) %></td>
+            <td class="num"><%= fmt.integer(period.run_count) %></td>
+            <td>
+              <div class="actions">
+                <a class="btn--link" href="/penilaian?period=<%= period.id %>">Penilaian</a>
+                <a class="btn--link" href="/periode/<%= period.id %>/ubah">Ubah</a>
+                <% if (!period.is_active) { %>
+                  <form class="inline-form" method="post" action="/periode/<%= period.id %>/aktifkan">
+                    <button type="submit" class="btn--link" data-busy-label="Mengaktifkan...">Aktifkan</button>
+                  </form>
+                <% } %>
+                <% if (period.assessment_count === 0 && period.run_count === 0) { %>
+                  <button
+                    type="button"
+                    class="btn--link btn--danger-link"
+                    data-confirm-action="/periode/<%= period.id %>/hapus"
+                    data-confirm-title="Hapus periode?"
+                    data-confirm-message="Periode <%= period.name %> belum memiliki penilaian atau hasil perhitungan. Data akan dihapus permanen."
+                    data-confirm-label="Hapus periode"
+                    data-confirm-tone="danger">Hapus</button>
+                <% } %>
+              </div>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="notice notice--info mt-24">
+    <span><strong>Satu periode aktif.</strong> Penilaian pegawai, dashboard, dan laporan mengikuti periode aktif. Periode lama tetap dapat dibuka melalui pemilih periode pada halaman penilaian, perhitungan, peringkat, dan laporan.</span>
+  </div>
+<% } else { %>
+  <div class="empty-state">
+    <p class="empty-state__title">Belum ada periode penilaian</p>
+    <p>Buat periode terlebih dahulu. Tanpa periode, nilai pegawai dan perhitungan TOPSIS belum dapat disimpan.</p>
+    <a class="btn btn--primary" href="/periode/baru">Buat periode pertama</a>
+  </div>
+<% } %>
+
+<%- include('../partials/layout-bottom') %>

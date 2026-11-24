@@ -1,0 +1,29 @@
+<header class="topbar">
+  <div class="topbar__left">
+    <button type="button" class="menu-button" data-sidebar-open aria-expanded="false" aria-controls="sidebar">
+      <span class="menu-button__lines" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span>Menu</span>
+    </button>
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <ol class="breadcrumb__list">
+        <% page.crumbs.forEach(function (crumb, index) { %>
+          <li class="breadcrumb__item">
+            <% if (crumb.href && index < page.crumbs.length - 1) { %>
+              <a href="<%= crumb.href %>"><%= crumb.label %></a>
+            <% } else { %>
+              <span<%- index === page.crumbs.length - 1 ? ' aria-current="page"' : '' %>><%= crumb.label %></span>
+            <% } %>
+          </li>
+        <% }); %>
+      </ol>
+    </nav>
+  </div>
+  <div class="period-chip">
+    <% if (activePeriod) { %>
+      <span>Periode aktif</span>
+      <strong><%= activePeriod.name %></strong>
+    <% } else { %>
+      <a href="/periode">Periode aktif belum ditetapkan</a>
+    <% } %>
+  </div>
+</header>

@@ -1,0 +1,141 @@
+<%- include('../partials/layout-top') %>
+
+<header class="page-header">
+  <div class="page-header__main">
+    <p class="page-header__kicker">Hasil pemeringkatan / <%= run.period_name %></p>
+    <h1><%= detail.employee_name %></h1>
+    <p class="page-header__description">Rincian kontribusi kriteria terhadap jarak solusi ideal pada run #<%= run.id %>. Seluruh nilai berasal dari snapshot perhitungan.</p>
+  </div>
+  <div class="page-header__actions">
+    <a class="btn btn--secondary" href="/peringkat?period=<%= run.period_id %>&run=<%= run.id %>">Kembali</a>
+    <a class="btn btn--secondary" href="/perhitungan/<%= run.id %>">Enam tahap</a>
+    <button type="button" class="btn btn--primary" data-print>Cetak</button>
+  </div>
+</header>
+
+<% if (stale) { %>
+  <div class="notice notice--warning">
+    <span><strong>Snapshot lama.</strong> Data berubah setelah run #<%= run.id %> dibuat. Nilai pada halaman ini tetap menunjukkan kondisi saat perhitungan tersebut.</span>
+    <a href="/perhitungan?period=<%= run.period_id %>">Hitung ulang</a>
+  </div>
+<% } %>
+
+<div class="detail-grid">
+  <div class="stack">
+    <section class="panel">
+      <div class="panel__header">
+        <div class="profile-heading">
+          <span class="profile-heading__initials" aria-hidden="true"><%= detail.employee_name.split(' ').slice(0, 2).map(function (part) { return part.charAt(0); }).join('') %></span>
+          <div>
+            <h2><%= detail.employee_name %></h2>
+            <p class="profile-heading__meta"><span class="mono"><%= detail.employee_code %></span> / <%= detail.employee_position %> / <%= detail.employee_department %></p>
+          </div>
+        </div>
+        <span class="badge badge--accent">Peringkat <%= detail.rank %></span>
+      </div>
+      <div class="panel__body">
+        <dl class="meta-list">
+          <dt>Nilai preferensi</dt>
+          <dd><strong class="mono"><%= fmt.decimal(detail.preference, 4) %></strong></dd>
+          <dt>Jarak ke A+ (D+)</dt>
+          <dd class="mono"><%= fmt.decimal(detail.d_plus, 6) %></dd>
+          <dt>Jarak ke A- (D-)</dt>
+          <dd class="mono"><%= fmt.decimal(detail.d_minus, 6) %></dd>
+          <dt>Periode</dt>
+          <dd><%= run.period_name %></dd>
+          <dt>Dihitung</dt>
+          <dd><%= fmt.dateTime(run.calculated_at) %></dd>
+        </dl>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <div>
+          <h2 class="panel__title">Kontribusi kriteria</h2>
+          <p class="panel__subtitle">Kontribusi dihitung dari kuadrat selisih nilai terbobot terhadap solusi ideal negatif, lalu dibagi kuadrat D-.</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <caption class="sr-only">Kontribusi setiap kriteria terhadap nilai preferensi <%= detail.employee_name %></caption>
+          <thead>
+            <tr>
+              <th scope="col">Kode</th>
+              <th scope="col">Kriteria</th>
+              <th scope="col">Atribut</th>
+              <th scope="col" class="num">Nilai asli</th>
+              <th scope="col" class="num">Ternormalisasi</th>
+              <th scope="col" class="num">Terbobot</th>
+              <th scope="col" class="num">Kontribusi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% detail.contributions.forEach(function (item) { %>
+              <tr>
+                <td class="code"><%= item.code %></td>
+                <td>
+                  <div class="table__primary"><%= item.name %></div>
+                  <div class="table__sub"><%= categoryLabel(item.category) %></div>
+                </td>
+                <td><%= attributeLabel(item.attribute) %></td>
+                <td class="num"><%= fmt.decimal(item.value, 2) %></td>
+                <td class="num"><%= fmt.decimal(item.normalized, 6) %></td>
+                <td class="num"><%= fmt.decimal(item.weighted, 6) %></td>
+                <td class="num"><%= fmt.percent(item.share * 100, 2) %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" colspan="6">Total kontribusi</th>
+              <td class="num"><%= fmt.percent(detail.contributions.reduce(function (sum, item) { return sum + item.share; }, 0) * 100, 2) %></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <aside class="detail-side">
+    <section class="panel">
+      <div class="panel__header">
+        <h2 class="panel__title">Arti nilai preferensi</h2>
+      </div>
+      <div class="panel__body">
+        <p class="definition-note">
+          Nilai preferensi berada pada rentang 0 sampai 1. Nilai lebih tinggi berarti alternatif lebih dekat ke solusi ideal positif dan lebih jauh dari solusi ideal negatif pada snapshot ini.
+        </p>
+        <p class="definition-note mt-16">
+          Kontribusi kriteria menjelaskan komposisi jarak D-, bukan sebab tunggal atas peringkat. Perubahan bobot atau nilai dapat mengubah komposisi tersebut pada perhitungan berikutnya.
+        </p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h2 class="panel__title">Sumber data</h2>
+      </div>
+      <div class="panel__body">
+        <dl class="meta-list">
+          <dt>Run</dt>
+          <dd class="mono">#<%= run.id %></dd>
+          <dt>Metode</dt>
+          <dd><%= run.method %></dd>
+          <dt>Alternatif</dt>
+          <dd><%= fmt.integer(run.employee_count) %> pegawai</dd>
+          <dt>Kriteria</dt>
+          <dd><%= fmt.integer(run.criteria_count) %> kriteria</dd>
+          <dt>Total bobot</dt>
+          <dd><%= fmt.percent(run.weight_total, 2) %></dd>
+        </dl>
+      </div>
+    </section>
+
+    <div class="notice notice--info">
+      <span>Hasil TOPSIS adalah alat bantu keputusan, bukan penilaian mutlak kualitas pribadi. Data awal aplikasi merupakan simulasi akademik.</span>
+    </div>
+  </aside>
+</div>
+
+<%- include('../partials/layout-bottom') %>

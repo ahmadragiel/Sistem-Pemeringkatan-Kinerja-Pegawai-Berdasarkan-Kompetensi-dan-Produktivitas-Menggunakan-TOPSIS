@@ -1,0 +1,93 @@
+<%- include('../partials/layout-top') %>
+
+<header class="page-header">
+  <div class="page-header__main">
+    <p class="page-header__kicker">Data master / Periode</p>
+    <h1><%= mode === 'create' ? 'Tambah Periode' : 'Ubah Periode' %></h1>
+    <p class="page-header__description">Beri nama periode yang jelas, misalnya tahun atau semester penilaian. Tanggal membantu membedakan riwayat, tetapi tidak membatasi pengisian nilai.</p>
+  </div>
+  <div class="page-header__actions">
+    <a class="btn btn--secondary" href="/periode">Batal</a>
+  </div>
+</header>
+
+<div class="form-layout">
+  <section class="panel">
+    <div class="panel__body">
+      <% if (Object.keys(errors).length > 0) { %>
+        <div class="form-errors" role="alert">
+          <strong>Data belum dapat disimpan.</strong>
+          <ul>
+            <% Object.values(errors).forEach(function (message) { %>
+              <li><%= message %></li>
+            <% }); %>
+          </ul>
+        </div>
+      <% } %>
+
+      <form method="post" action="<%= mode === 'create' ? '/periode' : '/periode/' + period.id %>">
+        <div class="form-grid">
+          <div class="field field--full">
+            <label for="name">Nama periode <span class="required" aria-hidden="true">*</span></label>
+            <input class="input" id="name" name="name" type="text" value="<%= period.name %>" maxlength="120" required aria-required="true"<%- errors.name ? ' aria-invalid="true" aria-describedby="name-error"' : '' %>>
+            <% if (errors.name) { %><p class="field__error" id="name-error"><%= errors.name %></p><% } else { %><p class="field__hint">Contoh: Penilaian Tahunan 2026 atau Semester I 2026.</p><% } %>
+          </div>
+
+          <div class="field">
+            <label for="start_date">Tanggal mulai</label>
+            <input class="input" id="start_date" name="start_date" type="date" value="<%= fmt.dateInput(period.start_date) %>"<%- errors.start_date ? ' aria-invalid="true" aria-describedby="start-date-error"' : '' %>>
+            <% if (errors.start_date) { %><p class="field__error" id="start-date-error"><%= errors.start_date %></p><% } %>
+          </div>
+
+          <div class="field">
+            <label for="end_date">Tanggal selesai</label>
+            <input class="input" id="end_date" name="end_date" type="date" value="<%= fmt.dateInput(period.end_date) %>"<%- errors.end_date ? ' aria-invalid="true" aria-describedby="end-date-error"' : '' %>>
+            <% if (errors.end_date) { %><p class="field__error" id="end-date-error"><%= errors.end_date %></p><% } %>
+          </div>
+
+          <div class="field field--full">
+            <div class="checkbox-row">
+              <input type="checkbox" id="is_active" name="is_active" value="1"<%= period.is_active ? ' checked' : '' %><%= !hasPeriods ? ' disabled' : '' %>>
+              <label for="is_active">
+                Jadikan periode aktif
+                <% if (!hasPeriods) { %><br><span class="muted">Periode pertama otomatis menjadi periode aktif.</span><% } %>
+              </label>
+            </div>
+            <% if (!hasPeriods) { %><input type="hidden" name="is_active" value="1"><% } %>
+            <% if (errors.is_active) { %><p class="field__error"><%= errors.is_active %></p><% } %>
+          </div>
+
+          <div class="field field--full">
+            <label for="notes">Catatan</label>
+            <textarea class="textarea" id="notes" name="notes" maxlength="1000"<%- errors.notes ? ' aria-invalid="true" aria-describedby="notes-error"' : '' %>><%= period.notes ?? '' %></textarea>
+            <% if (errors.notes) { %><p class="field__error" id="notes-error"><%= errors.notes %></p><% } else { %><p class="field__hint">Opsional. Gunakan untuk menjelaskan cakupan atau dasar periode penilaian.</p><% } %>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn--primary" data-busy-label="Menyimpan..."><%= mode === 'create' ? 'Simpan periode' : 'Simpan perubahan' %></button>
+          <a class="btn btn--secondary" href="/periode">Batal</a>
+          <span class="form-actions__note"><span aria-hidden="true">*</span> Wajib diisi.</span>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <aside class="form-layout__side">
+    <section class="panel">
+      <div class="panel__header">
+        <h2 class="panel__title">Catatan periode</h2>
+      </div>
+      <div class="panel__body">
+        <ul class="plain-list">
+          <li>Hanya satu periode yang dapat aktif pada satu waktu.</li>
+          <li>Mengaktifkan periode lain akan menonaktifkan periode yang sedang aktif.</li>
+          <li>Periode yang sudah memiliki nilai atau perhitungan tidak dapat dihapus.</li>
+          <li>Nilai dan hasil perhitungan tetap tersimpan meskipun periode tidak lagi aktif.</li>
+        </ul>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<%- include('../partials/layout-bottom') %>

@@ -1,0 +1,132 @@
+<%- include('../partials/layout-top') %>
+
+<header class="page-header">
+  <div class="page-header__main">
+    <p class="page-header__kicker">Penilaian</p>
+    <h1>Penilaian Pegawai</h1>
+    <p class="page-header__description">Isi nilai setiap pegawai untuk seluruh kriteria aktif pada periode terpilih. Satu pegawai dinilai melalui formulir tersendiri agar kesalahan dapat diperiksa per alternatif.</p>
+  </div>
+  <div class="page-header__actions">
+    <% if (period) { %>
+      <a class="btn btn--secondary" href="/perhitungan?period=<%= period.id %>">Periksa kelengkapan</a>
+    <% } %>
+  </div>
+</header>
+
+<% if (!period) { %>
+  <div class="empty-state">
+    <p class="empty-state__title">Belum ada periode penilaian</p>
+    <p>Penilaian pegawai disimpan per periode. Buat periode terlebih dahulu sebelum mengisi nilai.</p>
+    <a class="btn btn--primary" href="/periode/baru">Buat periode penilaian</a>
+  </div>
+<% } else { %>
+  <%- include('../partials/period-switch', { periods: periods, period: period, action: '/penilaian' }) %>
+
+  <% if (criteria.length === 0) { %>
+    <div class="notice notice--warning">
+      <span><strong>Belum ada kriteria aktif.</strong> Penilaian tidak dapat diisi hingga kriteria ditambahkan atau diaktifkan.</span>
+      <a href="/kriteria">Kelola kriteria</a>
+    </div>
+  <% } %>
+
+  <section class="stat-strip stat-strip--3" aria-label="Ringkasan kelengkapan penilaian">
+    <div class="stat">
+      <div class="stat__label">Pegawai aktif</div>
+      <div class="stat__value"><%= fmt.integer(summary.totalEmployees) %></div>
+      <div class="stat__note"><%= archivedCount > 0 ? fmt.integer(archivedCount) + ' pegawai diarsipkan, tidak dihitung' : 'Seluruh pegawai aktif menjadi alternatif' %></div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Nilai terisi</div>
+      <div class="stat__value"><%= fmt.integer(summary.filledTotal) %></div>
+      <div class="stat__note">Dari <%= fmt.integer(summary.expectedTotal) %> sel yang dibutuhkan</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Nilai belum diisi</div>
+      <div class="stat__value"><%= fmt.integer(summary.missingTotal) %></div>
+      <div class="stat__note"><%= summary.missingTotal === 0 ? 'Data lengkap dan siap dihitung' : 'Lengkapi sebelum menjalankan TOPSIS' %></div>
+    </div>
+  </section>
+
+  <form method="get" action="/penilaian" class="filters" aria-label="Pencarian pegawai">
+    <input type="hidden" name="period" value="<%= period.id %>">
+    <div class="field">
+      <label for="filter-q">Cari pegawai</label>
+      <input class="input" id="filter-q" type="search" name="q" value="<%= filters.q %>" placeholder="Nama, kode, atau jabatan">
+    </div>
+    <div class="filters__actions">
+      <button type="submit" class="btn btn--secondary btn--sm">Cari</button>
+      <a class="btn btn--ghost btn--sm" href="/penilaian?period=<%= period.id %>">Reset</a>
+    </div>
+  </form>
+
+  <% if (criteria.length > 0 && employees.length > 0) { %>
+    <div class="table-wrap">
+      <table class="table table--assessment">
+        <caption class="sr-only">Kelengkapan nilai pegawai pada periode <%= period.name %></caption>
+        <thead>
+          <tr>
+            <th scope="col">Pegawai</th>
+            <% criteria.forEach(function (criterion) { %>
+              <th scope="col" class="num">
+                <span class="table__criterion"><%= criterion.code %></span>
+                <span class="table__criterion-name"><%= criterion.name %></span>
+              </th>
+            <% }); %>
+            <th scope="col">Kelengkapan</th>
+            <th scope="col">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% employees.forEach(function (employee) { %>
+            <tr>
+              <td>
+                <div class="table__primary"><%= employee.name %></div>
+                <div class="table__sub"><span class="mono"><%= employee.code %></span> / <%= employee.department %></div>
+              </td>
+              <% employee.values.forEach(function (item) { %>
+                <td class="num">
+                  <% if (item.value === null) { %>
+                    <span class="missing">Belum</span>
+                  <% } else { %>
+                    <%= fmt.decimal(item.value, 2) %>
+                  <% } %>
+                </td>
+              <% }); %>
+              <td>
+                <% if (employee.filled === criteria.length) { %>
+                  <span class="badge badge--success"><span class="badge__dot" aria-hidden="true"></span>Lengkap</span>
+                <% } else { %>
+                  <span class="badge badge--warning"><span class="badge__dot" aria-hidden="true"></span><%= employee.filled %> dari <%= criteria.length %></span>
+                <% } %>
+              </td>
+              <td>
+                <a class="btn--link" href="/penilaian/<%= employee.id %>?period=<%= period.id %>"><%= employee.filled > 0 ? 'Ubah nilai' : 'Isi nilai' %></a>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    <%- include('../partials/pagination', { pagination: pagination }) %>
+  <% } else if (criteria.length > 0) { %>
+    <div class="empty-state">
+      <% if (filters.q) { %>
+        <p class="empty-state__title">Tidak ada pegawai yang cocok</p>
+        <p>Ubah kata kunci pencarian atau kembali ke seluruh daftar pegawai.</p>
+        <a class="btn btn--secondary" href="/penilaian?period=<%= period.id %>">Reset pencarian</a>
+      <% } else { %>
+        <p class="empty-state__title">Belum ada pegawai aktif</p>
+        <p>Tambahkan pegawai atau pulihkan pegawai dari arsip sebelum mengisi penilaian.</p>
+        <a class="btn btn--primary" href="/pegawai/baru">Tambah pegawai</a>
+      <% } %>
+    </div>
+  <% } %>
+
+  <% if (criteria.length > 0) { %>
+    <div class="notice notice--info mt-24">
+      <span><strong>Aturan nilai.</strong> Setiap kriteria memiliki skala minimum dan maksimum. Nilai kosong akan menghapus nilai yang tersimpan pada kriteria tersebut. Perhitungan TOPSIS hanya dapat dijalankan jika seluruh pegawai aktif memiliki nilai lengkap.</span>
+    </div>
+  <% } %>
+<% } %>
+
+<%- include('../partials/layout-bottom') %>
